@@ -99,7 +99,7 @@ bot = commands.Bot(command_prefix = settings['prefix'], intents = intents) #пр
 #@commands.has_permissions( administrator = True )
 
 
-
+lol = 1
 
 
 def neeewlvl(member_id):
