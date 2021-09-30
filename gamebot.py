@@ -99,6 +99,9 @@ hui_andera = 0
 
 
 
+hui_kira = 1000
+
+
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix = settings['prefix'], intents = intents) #прогружаем префикс
 #@commands.has_permissions( administrator = True )
@@ -109,16 +112,12 @@ bot = commands.Bot(command_prefix = settings['prefix'], intents = intents) #пр
 
 def neeewlvl(member_id):
     print(member_id)
-
     cur = con.cursor()
     cur.execute(f"SELECT user_id, level, exp FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})") #Получаем user_id, level, exp
     record = cur.fetchall()
-
     print(f"{datetime.now()} Просчет ЛВЛ | ID: {record[0][0]} LVL: {record[0][1]} EXP: {record[0][2]} Следующий лвл: {record[0][1] + 1}") #ПРИНТЫ
-
     cur.execute(f"SELECT MAX(exp_lvl), exp_exp FROM exp WHERE exp_exp <= {record[0][2]}") #Просчет опыта и лвл
     record2 = cur.fetchall()
-
     if record[0][1] != record2[0][0]: #Если максимальный лвл уже равен просчету, то пропускаем
         cur.execute(f"UPDATE char SET level = {record2[0][0]} WHERE user_id = {record[0][0]}") #выдаем новый лвл
         con.commit()
