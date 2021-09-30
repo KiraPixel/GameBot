@@ -97,9 +97,7 @@ with sq.connect('DataBase.db') as con:
 hui_andera = 0
 
 
-
-
-hui_kira = 1000
+hui_kira = 10
 
 
 intents = discord.Intents.all()
