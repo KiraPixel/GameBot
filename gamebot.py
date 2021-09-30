@@ -97,6 +97,9 @@ with sq.connect('DataBase.db') as con:
 
 
 
+hui_kira = 1000
+
+
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix = settings['prefix'], intents = intents) #прогружаем префикс
 #@commands.has_permissions( administrator = True )
