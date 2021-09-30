@@ -94,6 +94,8 @@ with sq.connect('DataBase.db') as con:
     con.commit()
 
 
+hui_andera = 0
+
 
 
 
