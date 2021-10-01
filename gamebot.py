@@ -120,7 +120,8 @@ def neeewlvl(member_id):
 async def ml(ctx):
     member_id = ctx.message.author.id
     neeewlvl(member_id)
-    
+    await ctx.channel.send(ctx.message.author.avatar_url)
+
 
 
 
