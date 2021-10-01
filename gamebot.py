@@ -554,6 +554,7 @@ async def top_kubky(ctx):
             colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         )
         await ctx.send(embed=embed)
+        con.commit()
 
 
 print (f"{datetime.now()} BOT START")
