@@ -128,31 +128,30 @@ async def ml(ctx):
 @bot.command()
 async def profile(ctx):
     member_id = ctx.message.author.id
-    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, attack, deffens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
+    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, attack, deffens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем кучу дерьма
     record = cur.fetchall()
     con.commit()
 
     lol = list(record[0][8:])
 
-    for x in range(6):
+    for x in range(6):      #разгребаем дерьмо инвентаря
         if lol[x] == 0:
-            lol[x] = "пусто"
+            lol[x] = "пусто"    #если слот пустой, так и пишем
         else: 
             search_item = lol[x]
-            cur.execute(f"SELECT item_name FROM item WHERE item_id = {search_item}")
+            cur.execute(f"SELECT item_name FROM item WHERE item_id = {search_item}")    #если в слоте есть предмет ищем его название
             search_item = cur.fetchall()
             lol[x] = search_item[0][0]
         con.commit()
         
 
-    embed = discord.Embed(colour=discord.Colour(0x8bc85a), description=f"Ник: {record[0][1]} | ID: {record[0][0]}")
+    value1 = f"✨ LVL: {record[0][2]}/45 \n❤️ HP: {record[0][3]}/{record[0][4]} \n💰 Деньги: {record[0][5]}\n🗡️ Атака: {record[0][6]} \n🛡️ Защита: {record[0][7]}\n \n "
+    value2 = f"🎩Голова: {lol[0]}\n👕 Тело: {lol[1]}\n👣 Ноги: {lol[0]}\n📿Аксессуар: {lol[2]} \n🗡️ Левая рука: {lol[3]}\n🛡️ Правая рука: {lol[4]}"
 
+    embed = discord.Embed(colour=discord.Colour(0x8bc85a), description=f"Ник: {record[0][1]} | ID: {record[0][0]}")
     embed.set_thumbnail(url=ctx.message.author.avatar_url)
     embed.set_author(name="Игровой профиль")
     embed.set_footer(text="Сейчас: #ЗЛЮКА ДОБАВЬ СТАТУСЫ | Бой: атакует ЗЛЮКУ")
-
-    value1 = f"✨ LVL: {record[0][2]}/45 \n❤️ HP: {record[0][3]}/{record[0][4]} \n💰 Деньги: {record[0][5]}\n🗡️ Атака: {record[0][6]} \n🛡️ Защита: {record[0][7]}\n \n "
-    value2 = f"🎩Голова: {lol[0]}\n👕 Тело: {lol[1]}\n👣 Ноги: {lol[0]}\n📿Аксессуар: {lol[2]} \n🗡️ Левая рука: {lol[3]}\n🛡️ Правая рука: {lol[4]}"
     embed.add_field(name="Инфо:", value=value1)
     embed.add_field(name="\nСлоты:", value=value2)
 
