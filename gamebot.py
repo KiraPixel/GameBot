@@ -64,8 +64,8 @@ with sq.connect('DataBase.db') as con:
 
     cur.execute("""CREATE TABLE IF NOT EXISTS char (
         user_id INT NOT NULL,
-        atack INT DEFAULT 1,
-        defens INT DEFAULT 1,
+        attack INT DEFAULT 1,
+        deffens INT DEFAULT 1,
         exp INT DEFAULT 10,
         level INT DEFAULT 1,
         hp INT DEFAULT 10,
@@ -76,7 +76,7 @@ with sq.connect('DataBase.db') as con:
         slot_head INT DEFAULT 0,
         slot_foots INT DEFAULT 0,
         slot_chest INT DEFAULT 0,
-        slot_pants INT DEFAULT 0
+        slot_accessory INT DEFAULT 0
         )""")
     
     cur.execute("""CREATE TABLE IF NOT EXISTS battle (
@@ -120,7 +120,42 @@ def neeewlvl(member_id):
 async def ml(ctx):
     member_id = ctx.message.author.id
     neeewlvl(member_id)
-    await ctx.channel.send(ctx.message.author.avatar_url)
+    await ctx.channel.send()
+
+
+
+
+@bot.command() #Тестовая команда
+async def profile(ctx):
+    member_id = ctx.message.author.id
+    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, atack, defens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
+    record = cur.fetchall()
+
+    lol = list(record[0][8:])
+
+    for x in range(6):
+        if lol[x] == 0:
+            lol[x] = "пусто"
+        else: 
+            search_item = lol[x]
+            cur.execute(f"SELECT item_name FROM item WHERE item_id = {search_item}")
+            search_item = cur.fetchall()
+            lol[x] = search_item[0][0]
+        con.commit()
+        
+
+    embed = discord.Embed(colour=discord.Colour(0x8bc85a), description=f"Ник: {record[0][1]} | ID: {record[0][0]}")
+
+    embed.set_thumbnail(url=ctx.message.author.avatar_url)
+    embed.set_author(name="Игровой профиль")
+    embed.set_footer(text="Сейчас: #ЗЛЮКА ДОБАВЬ СТАТУСЫ | Бой: атакует ЗЛЮКУ")
+
+    value1 = f"✨ LVL: {record[0][2]}/45 \n❤️ HP: {record[0][3]}/{record[0][4]} \n💰 Деньги: {record[0][5]}\n🗡️ Атака: {record[0][6]} \n🛡️ Защита: {record[0][7]}\n \n "
+    value2 = f"🎩Голова: {lol[0]}\n👕 Тело: {lol[1]}\n👣 Ноги: {lol[0]}\n📿Аксессуар: {lol[2]} \n🗡️ Левая рука: {lol[3]}\n🛡️ Правая рука: {lol[4]}"
+    embed.add_field(name="Инфо:", value=value1)
+    embed.add_field(name="\nСлоты:", value=value2)
+
+    await ctx.channel.send(embed=embed)
 
 
 
@@ -202,6 +237,7 @@ async def battle():
 
 
 
+
 @bot.event
 async def on_ready():
     print(f"{datetime.now()} Bot сonnected to Discord")
@@ -211,6 +247,8 @@ async def on_ready():
     scheduler.add_job(battle, trigger='cron', hour='16', minute='00')
     scheduler.add_job(battle, trigger='cron', hour='20', minute='00')
     scheduler.start()
+
+
 
 
 
@@ -237,6 +275,8 @@ async def walk(ctx):
     scheduler.add_job(walk_time, trigger='cron', minute=five_minut.minute)
     scheduler.start()
     await member.send(random.choice(walk_list))
+
+
 
 
 
@@ -353,7 +393,7 @@ async def createguild(ctx, groupname: str):
 
 @bot.command()
 @has_permissions(administrator = True)
-async def ig(ctx, opponent: discord.Member):
+async def inviteguild(ctx, opponent: discord.Member):
     member = ctx.message.author.id #получаю id отправителя сообщени
     print(f"{datetime.now()} {member} пытается пригласить {opponent} в гильдию")
     opponent = opponent.id #получаем id оппонента
@@ -486,6 +526,8 @@ async def on_message(message):
             id_role = id_role[emoji_post] # сопоставляем эмоджи и id роли
             role = discord.utils.get(guild.roles, id = id_role) #находим роль на сервере
             await member.add_roles(role) # выдаем роль
+            role_gamer = discord.utils.get(guild.roles, id = 890294463849726054) 
+            await member.add_roles(role_gamer)
 
             #ПРИНТЫ!
             print(f"{datetime.now()} Выбрана расу: {role}")
@@ -537,14 +579,14 @@ async def on_message(message):
 
 @bot.command()
 async def top_kubky(ctx):
-    with sq.connect('DataBase.db') as con:
+    with sq.connect('battle.db') as con:
         cur = con.cursor()
-        info_kubki = cur.execute(f"SELECT * FROM battle")
+        info_kubki = cur.execute(f"SELECT * FROM sosi")
         top = {"Дриады": 0, "Драконы": 0, "Зверолюди": 0, "Люди": 0}
         a = ["Дриады", "Драконы", "Зверолюди", "Люди"]
         b = 0
-        for i in info_kubki:
-            top[a[b]] = i[6]
+        for hui in info_kubki:
+            top[a[b]] = hui[6]
             b += 1
         sorted_battle_top = sorted(top.items(), key=operator.itemgetter(1))
         top_fraction = f"1. {sorted_battle_top[3][0]} - {sorted_battle_top[3][1]}🏆\n2. {sorted_battle_top[2][0]} - {sorted_battle_top[2][1]}🏆\n3. {sorted_battle_top[1][0]} - {sorted_battle_top[1][1]}🏆\n4. {sorted_battle_top[0][0]} - {sorted_battle_top[0][1]}🏆"
