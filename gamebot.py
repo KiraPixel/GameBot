@@ -125,11 +125,12 @@ async def ml(ctx):
 
 
 
-@bot.command() #Тестовая команда
+@bot.command()
 async def profile(ctx):
     member_id = ctx.message.author.id
-    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, atack, defens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
+    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, attack, deffens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
     record = cur.fetchall()
+    con.commit()
 
     lol = list(record[0][8:])
 
