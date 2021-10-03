@@ -116,11 +116,9 @@ def neeewlvl(member_id):
 
 
 @bot.command() #Тестовая команда
-@has_permissions(administrator = True)
 async def ml(ctx):
     member_id = ctx.message.author.id
     neeewlvl(member_id)
-    await ctx.channel.send()
 
 
 
@@ -255,22 +253,57 @@ async def on_ready():
 
 
 @bot.command()
-@has_permissions(administrator = True)
+# @has_permissions(administrator = True)
 async def walk(ctx):
     print(f"{datetime.now()} {ctx.message.author} решил пойти погулять") #Серьезно? Это тоже?
+    member_id = ctx.message.author.id
     member = ctx.message.author
+    cur.execute(f"SELECT user_id, level FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})") #Получаем user_id, level, exp
+    record = cur.fetchall()
+
+    if record[0][1] <= 14:
+        max_xp = 3
+    elif record[0][1] >= 15 and record[0][1] < 26:
+        max_xp = 10
+    elif record[0][1] >= 26 and record[0][1] < 31:
+        max_xp = 20
+    elif record[0][1] >= 31 and record[0][1] < 35:
+        max_xp = 30
+    elif record[0][1] >= 35 and record[0][1] < 40:
+        max_xp = 35
+    elif record[0][1] >= 40 and record[0][1] < 45:
+        max_xp = 40
+    elif record[0][1] <= 45:
+        max_xp = 50
+    else:
+        max_xp = 0
+
+    if max_xp == 3:
+        coin = 1
+    elif max_xp == 0:
+        coin = 0
+    else:
+        max_xp = max_xp + random.randint( -5, 2)
+        coin = max_xp + random.randint( -5, -3)
+
     walk_list = [
         "Вы решили немного прогуляться",
         "Вы устали работать и решили немного погулять",
-        "Вам надоел этот прекрасный мир, который богиня благословляет\n И вы решили погулять",
+        "Вам надоел этот прекрасный мир, который богиня благословляет\nИ вы решили погулять",
         "Пойдем гулять...",
     ]
 
+
     async def walk_time():
-        await member.send("hi!")
+        print("НУЖНЫЙ ПРИНТ")
+        cur.execute(f"UPDATE char SET exp = exp + {max_xp}, coins = coins + {coin} WHERE user_id = {record[0][0]}")
+        con.commit() 
+        await member.send(f"Вам начисленно {max_xp} опыта и {coin} монет !")
+        neeewlvl(member_id)
+
 
     date_now = datetime.now()
-    five_minut = date_now + timedelta(seconds=60*5)
+    five_minut = date_now + timedelta(seconds=60*1)
     scheduler = AsyncIOScheduler()
     scheduler.add_job(walk_time, trigger='cron', minute=five_minut.minute)
     scheduler.start()
