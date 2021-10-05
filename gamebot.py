@@ -76,7 +76,9 @@ with sq.connect('DataBase.db') as con:
         slot_head INT DEFAULT 0,
         slot_foots INT DEFAULT 0,
         slot_chest INT DEFAULT 0,
-        slot_accessory INT DEFAULT 0
+        slot_accessory INT DEFAULT 0,
+        "activity"  TEXT DEFAULT 0,
+        "figh"  TEXT DEFAULT 0
         )""")
     
     cur.execute("""CREATE TABLE IF NOT EXISTS battle (
@@ -91,6 +93,7 @@ with sq.connect('DataBase.db') as con:
 
         )""")
 
+    cur.execute(f"UPDATE char SET activity = '0', figh = '0'") #Сбрасываем статусы
     con.commit()
 
 intents = discord.Intents.all()
@@ -112,9 +115,6 @@ def neeewlvl(member_id):
         con.commit()
 
 
-
-
-
 @bot.command() #Тестовая команда
 async def ml(ctx):
     member_id = ctx.message.author.id
@@ -122,16 +122,20 @@ async def ml(ctx):
 
 
 
-
 @bot.command()
 async def profile(ctx):
     member_id = ctx.message.author.id
-    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, attack, deffens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем кучу дерьма
+    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, attack, deffens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand, activity, figh FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем кучу дерьма
     record = cur.fetchall()
     con.commit()
 
-    lol = list(record[0][8:])
+    status = list(record[0][14:])
+    if status[0] == '0':
+        status[0] = "свободен"
+    if status[1] == '0':
+        status[1] = "отдыхает"
 
+    lol = list(record[0][8:])
     for x in range(6):      #разгребаем дерьмо инвентаря
         if lol[x] == 0:
             lol[x] = "пусто"    #если слот пустой, так и пишем
@@ -140,19 +144,18 @@ async def profile(ctx):
             cur.execute(f"SELECT item_name FROM item WHERE item_id = {search_item}")    #если в слоте есть предмет ищем его название
             search_item = cur.fetchall()
             lol[x] = search_item[0][0]
-        con.commit()
+            con.commit()
         
 
-    value1 = f"✨ LVL: {record[0][2]}/45 \n❤️ HP: {record[0][3]}/{record[0][4]} \n💰 Деньги: {record[0][5]}\n🗡️ Атака: {record[0][6]} \n🛡️ Защита: {record[0][7]}\n \n "
+    value1 = f"✨ LVL: {record[0][2]}\n❤️ HP: {record[0][3]}/{record[0][4]} \n💰 Деньги: {record[0][5]}\n🗡️ Атака: {record[0][6]} \n🛡️ Защита: {record[0][7]}\n \n "
     value2 = f"🎩Голова: {lol[0]}\n👕 Тело: {lol[1]}\n👣 Ноги: {lol[0]}\n📿Аксессуар: {lol[2]} \n🗡️ Левая рука: {lol[3]}\n🛡️ Правая рука: {lol[4]}"
-
+    statusvalue = f"Занятие: {status[0]} | Бой: {status[1]}"
     embed = discord.Embed(colour=discord.Colour(0x8bc85a), description=f"Ник: {record[0][1]} | ID: {record[0][0]}")
     embed.set_thumbnail(url=ctx.message.author.avatar_url)
     embed.set_author(name="Игровой профиль")
-    embed.set_footer(text="Сейчас: #ЗЛЮКА ДОБАВЬ СТАТУСЫ | Бой: атакует ЗЛЮКУ")
+    embed.set_footer(text=statusvalue)
     embed.add_field(name="Инфо:", value=value1)
     embed.add_field(name="\nСлоты:", value=value2)
-
     await ctx.channel.send(embed=embed)
 
 
@@ -258,10 +261,18 @@ async def walk(ctx):
     print(f"{datetime.now()} {ctx.message.author} решил пойти погулять") #Серьезно? Это тоже?
     member_id = ctx.message.author.id
     member = ctx.message.author
-    cur.execute(f"SELECT user_id, level FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})") #Получаем user_id, level, exp
+    cur.execute(f"SELECT user_id, level, activity FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})") #Получаем user_id, level, exp
     record = cur.fetchall()
 
-    if record[0][1] <= 14:
+    if record[0][2] != '0': #проверка, что чел не занят
+        await member.send(f"Вы сейчас не можете гулять. Ваше текущее занятие: {record[0][2]}")
+        print(f"{datetime.now()} {ctx.message.author} не может сейчас гулять, он: {record[0][2]}")
+        return
+    else:
+        cur.execute(f"UPDATE char SET activity = 'гуляет' WHERE user_id = {record[0][0]}")
+        con.commit()
+
+    if record[0][1] <= 14:  #Проверка на лвл
         max_xp = 3
     elif record[0][1] >= 15 and record[0][1] < 26:
         max_xp = 10
@@ -276,13 +287,13 @@ async def walk(ctx):
     elif record[0][1] <= 45:
         max_xp = 50
     else:
-        max_xp = 0
+        max_xp = 0 #Если лвл какой-то неправильный, даем ноль опыта
 
-    if max_xp == 3:
-        coin = 1
+    if max_xp == 3: #По сути с 0 до 14 лвл будет давать 1 coin
+        coin = 1 
     elif max_xp == 0:
-        coin = 0
-    else:
+        coin = 0 #Если лвл какой-то неправильный, даем ноль опыта
+    else: #если чел больше 14 лвл, рандомно даем денег
         max_xp = max_xp + random.randint( -5, 2)
         coin = max_xp + random.randint( -5, -3)
 
@@ -293,18 +304,19 @@ async def walk(ctx):
         "Пойдем гулять...",
     ]
 
+    scheduler = AsyncIOScheduler()
 
     async def walk_time():
         print("НУЖНЫЙ ПРИНТ")
-        cur.execute(f"UPDATE char SET exp = exp + {max_xp}, coins = coins + {coin} WHERE user_id = {record[0][0]}")
+        cur.execute(f"UPDATE char SET exp = exp + {max_xp}, coins = coins + {coin}, activity = 0 WHERE user_id = {record[0][0]}")
         con.commit() 
         await member.send(f"Вам начисленно {max_xp} опыта и {coin} монет !")
         neeewlvl(member_id)
+        scheduler.shutdown()
 
 
     date_now = datetime.now()
-    five_minut = date_now + timedelta(seconds=60*1)
-    scheduler = AsyncIOScheduler()
+    five_minut = date_now + timedelta(seconds=60*5)
     scheduler.add_job(walk_time, trigger='cron', minute=five_minut.minute)
     scheduler.start()
     await member.send(random.choice(walk_list))
