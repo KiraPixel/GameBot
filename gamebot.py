@@ -100,6 +100,11 @@ intents = discord.Intents.all()
 bot = commands.Bot(command_prefix = settings['prefix'], intents = intents) #прогружаем префикс
 #@commands.has_permissions( administrator = True )
 
+@bot.remove_command('help') #УДАЛЯЕМ СРАННЫЙ HELP
+
+@bot.command()
+async def help(ctx):
+    await ctx.channel.send("Команда в разработке")
 
 
 def neeewlvl(member_id):
@@ -622,26 +627,24 @@ async def on_message(message):
 
 
 
+
 @bot.command()
-async def top_kubky(ctx):
-    with sq.connect('battle.db') as con:
-        cur = con.cursor()
-        info_kubki = cur.execute(f"SELECT * FROM sosi")
-        top = {"Дриады": 0, "Драконы": 0, "Зверолюди": 0, "Люди": 0}
-        a = ["Дриады", "Драконы", "Зверолюди", "Люди"]
-        b = 0
-        for hui in info_kubki:
-            top[a[b]] = hui[6]
-            b += 1
-        sorted_battle_top = sorted(top.items(), key=operator.itemgetter(1))
-        top_fraction = f"1. {sorted_battle_top[3][0]} - {sorted_battle_top[3][1]}🏆\n2. {sorted_battle_top[2][0]} - {sorted_battle_top[2][1]}🏆\n3. {sorted_battle_top[1][0]} - {sorted_battle_top[1][1]}🏆\n4. {sorted_battle_top[0][0]} - {sorted_battle_top[0][1]}🏆"
-        embed = discord.Embed(
-            title = "🏆Топ рас🏆:",
-            description = f"{top_fraction}",
-            colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-        )
-        await ctx.send(embed=embed)
-        con.commit()
+async def top(ctx):
+    info_kubki = cur.execute(f"SELECT * FROM battle")
+    top = {"Дриады": 0, "Драконы": 0, "Зверолюди": 0, "Люди": 0}
+    a = ["Дриады", "Драконы", "Зверолюди", "Люди"]
+    b = 0
+    for i in info_kubki:
+        top[a[b]] = i[6]
+        b += 1
+    sorted_battle_top = sorted(top.items(), key=operator.itemgetter(1))
+    top_fraction = f"1. {sorted_battle_top[3][0]} - {sorted_battle_top[3][1]}🏆\n2. {sorted_battle_top[2][0]} - {sorted_battle_top[2][1]}🏆\n3. {sorted_battle_top[1][0]} - {sorted_battle_top[1][1]}🏆\n4. {sorted_battle_top[0][0]} - {sorted_battle_top[0][1]}🏆"
+    embed = discord.Embed(
+        title = "🏆Топ рас🏆:",
+        description = f"{top_fraction}",
+        colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    )
+    await ctx.send(embed=embed)
 
 
 print (f"{datetime.now()} BOT START")
