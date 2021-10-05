@@ -232,7 +232,7 @@ async def battle():
         sorted_battle_top = sorted(battle_top.items(), key=operator.itemgetter(1)) #Сортировка списка(определение топа)
         top_fraction = f"1. {sorted_battle_top[3][0]} - {sorted_battle_top[3][1][0]}🏆{sorted_battle_top[3][1][1]}\n2. {sorted_battle_top[2][0]} - {sorted_battle_top[2][1][0]}🏆{sorted_battle_top[2][1][1]}\n3. {sorted_battle_top[1][0]} - {sorted_battle_top[1][1][0]}🏆{sorted_battle_top[1][1][1]}\n4. {sorted_battle_top[0][0]} - {sorted_battle_top[0][1][0]}🏆{sorted_battle_top[0][1][1]}"             
         record = cur.fetchall() #Эмбед-репорт о битве
-        reports = bot.get_channel(890280293620150312) #канал отправки эмбеда
+        reports = bot.get_channel(890294191027011625) #канал отправки эмбеда
         embed = discord.Embed(
             title = f'БИТВА на {datetime.now().hour} часов\n\n',
             description = f'{Direction["Дриады"][4]}\nРаунд за: {Direction["Дриады"][2]}\nПобедители набрали: {Direction["Дриады"][3]}🏆\n\n{Direction["Драконы"][4]}\nРаунд за: {Direction["Драконы"][2]}\nПобедители набрали: {Direction["Драконы"][3]}🏆\n\n{Direction["Зверолюди"][4]}\nРаунд за: {Direction["Зверолюди"][2]}\nПобедители набрали: {Direction["Зверолюди"][3]}🏆\n\n{Direction["Люди"][4]}\nРаунд за: {Direction["Люди"][2]}\nПобедители набрали: {Direction["Люди"][3]}🏆\n\nТОП ФРАКЦИЙ:\n{top_fraction}\n',
@@ -257,6 +257,67 @@ async def on_ready():
     scheduler.add_job(battle, trigger='cron', hour='20', minute='00')
     scheduler.start()
 
+
+
+
+
+
+
+@bot.command()
+# @has_permissions(administrator = True)
+async def gb(ctx, Direction: str ):#Битвы
+    member_id = ctx.message.author.id
+    member = ctx.message.author
+    cur.execute(f"SELECT id, race, figh, hp, max_hp, level, attack, deffens FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
+    record = cur.fetchall()
+    raceemoji = ["🐱","🐉","🍀","🧙"]
+    race = ["Зверолюди", "Драконы", "Дриады", "Люди"]
+    racestatus = ["Атакует зверолюдей", "Атакует драконов", "Атакует дриад", "Атакует людей", "Защищает свою фракцию"] 
+    raceattak = ["neko_atack", "dragons_atack", "driadas_atack", "people_atack"]
+
+    for i in record:
+        member_race = i[1]
+        attack = i[6]
+        deffens = i[7]
+        max_hp = i[4]
+        hp = i[3]
+        figh = i[2]
+    try:
+        if int(figh) == 0:
+            print("Все ок")
+    except ValueError:
+        await member.send("Вы уже участвуйте в битве")
+        return
+
+    if record[0][3] == 0:
+        await member.send("Вы не можете сражаться с нулевым здоровьем")
+        return
+
+    if Direction == record[0][1]:
+        #await member.send("Вы не можете напасть на свою расу")
+        power = (attack*deffens/2)/2/max_hp*hp
+        print(power)
+        cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
+        cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
+        con.commit()
+        return
+
+    if Direction not in race:
+        await member.send("Принимается только: Зверолюди; Драконы; Дриады; Люди; Дефф")
+        return
+
+    power = (deffens*attack/2)/2/max_hp*hp
+    member_race_number = race.index(member_race)
+    status_attack = race.index(Direction)
+    cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{Direction}'")
+    cur.execute(f"UPDATE char SET figh = '{racestatus[status_attack]}' WHERE user_id = {record[0][0]}")
+    con.commit()
+
+
+
+
+
+    
 
 
 
