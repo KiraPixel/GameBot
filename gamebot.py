@@ -796,5 +796,42 @@ async def top(ctx):
     await ctx.send(embed=embed)
 
 
+
+
+@bot.command()#топ по опыту
+async def topexp(ctx):
+    with sq.connect('DataBase.db') as con:
+        cur = con.cursor()
+        cur.execute('SELECT * FROM char WHERE user_id>0 ORDER BY exp DESC')
+        record = cur.fetchall()
+        cur.execute('SELECT * FROM users WHERE id>0 ORDER BY id')
+        record2 = cur.fetchall()
+        member_id = ctx.message.author.id
+        top = []
+        mesto = []
+        fraction = {"Дриады": "🍀", "Драконы": "🐉", "Зверолюди": "🐱", "Люди": "🧙"}
+        for i in record:
+            top.append(record.index(i) + 1)
+            top.append(fraction[record2[record.index(i)][5]])
+            top.append(record2[record.index(i)][3])
+            top.append(record[record.index(i)][3])
+            top.append(record[record.index(i)][4])
+            if record2[record.index(i)][1] == member_id:
+                mesto.append((round((len(top))/5)) + 1)
+                mesto.append(fraction[record2[record.index(i)][5]])
+                mesto.append(record2[record.index(i)][3])
+                mesto.append(record[record.index(i)][3])
+                mesto.append(record[record.index(i)][4])
+            else:
+                pass
+        topmsg = f"{top[0]}. {top[1]}{top[2]} 🔮{top[3]} ✨{top[4]}\n{top[5]}. {top[6]}{top[7]} 🔮{top[8]} ✨{top[9]}\n{top[10]}. {top[11]}{top[12]} 🔮{top[13]} ✨{top[14]}\n{top[15]}. {top[16]}{top[17]} 🔮{top[18]} ✨{top[19]}\n{top[20]}. {top[21]}{top[22]} 🔮{top[23]} ✨{top[24]}\n\nВаше место:\n {mesto[0]}. {mesto[1]}{mesto[2]} 🔮{mesto[3]} ✨{mesto[4]}"
+        embed = discord.Embed(
+            title = "🏆Топ по уровню:",
+            description = f"{topmsg}",
+            colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        )
+        await ctx.send(embed=embed)
+        con.commit()
+
 print (f"{datetime.now()} BOT START")
 bot.run(settings['token']) #берем токен из конфига и стартуем
