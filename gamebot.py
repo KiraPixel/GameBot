@@ -817,7 +817,7 @@ async def topexp(ctx):
             top.append(record[record.index(i)][3])
             top.append(record[record.index(i)][4])
             if record2[record.index(i)][1] == member_id:
-                mesto.append((round((len(top))/5)) + 1)
+                mesto.append(round((len(top))/5))
                 mesto.append(fraction[record2[record.index(i)][5]])
                 mesto.append(record2[record.index(i)][3])
                 mesto.append(record[record.index(i)][3])
