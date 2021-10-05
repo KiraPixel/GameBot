@@ -130,11 +130,14 @@ async def ml(ctx):
 @bot.command()
 async def profile(ctx):
     member_id = ctx.message.author.id
-    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, attack, deffens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand, activity, figh FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем кучу дерьма
+    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, attack, deffens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand, activity, figh, exp FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем кучу дерьма
     record = cur.fetchall()
+    cur.execute(f"SELECT exp_exp FROM exp WHERE exp_lvl = {record[0][2]} + 1")
+    next_exp = cur.fetchall()
     con.commit()
 
-    status = list(record[0][14:])
+    status = (record[0][14], record[0][15])
+    status = list(status)
     if status[0] == '0':
         status[0] = "свободен"
     if status[1] == '0':
@@ -152,8 +155,8 @@ async def profile(ctx):
             con.commit()
         
 
-    value1 = f"✨ LVL: {record[0][2]}\n❤️ HP: {record[0][3]}/{record[0][4]} \n💰 Деньги: {record[0][5]}\n🗡️ Атака: {record[0][6]} \n🛡️ Защита: {record[0][7]}\n \n "
-    value2 = f"🎩Голова: {lol[0]}\n👕 Тело: {lol[1]}\n👣 Ноги: {lol[0]}\n📿Аксессуар: {lol[2]} \n🗡️ Левая рука: {lol[3]}\n🛡️ Правая рука: {lol[4]}"
+    value1 = f"✨ LVL: {record[0][2]}\n🔮 EXP: {record[0][16]}/{next_exp[0][0]}\n❤️ HP: {record[0][3]}/{record[0][4]} \n💰 Деньги: {record[0][5]}\n🗡️ Атака: {record[0][6]} \n🛡️ Защита: {record[0][7]}\n \n "
+    value2 = f"🧢Голова: {lol[0]}\n👕 Тело: {lol[1]}\n🦵 Ноги: {lol[0]}\n📿Аксессуар: {lol[2]} \n🤚 Левая рука: {lol[3]}\n✋ Правая рука: {lol[4]}"
     statusvalue = f"Занятие: {status[0]} | Бой: {status[1]}"
     embed = discord.Embed(colour=discord.Colour(0x8bc85a), description=f"Ник: {record[0][1]} | ID: {record[0][0]}")
     embed.set_thumbnail(url=ctx.message.author.avatar_url)
@@ -262,6 +265,86 @@ async def on_ready():
 
 @bot.command()
 # @has_permissions(administrator = True)
+async def job(ctx):
+    print(f"{datetime.now()} {ctx.message.author} решил поработать") #Серьезно? Это тоже?
+    member_id = ctx.message.author.id
+    member = ctx.message.author
+    cur.execute(f"SELECT user_id, level, activity FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})") #Получаем user_id, level, exp
+    record = cur.fetchall()
+
+    if record[0][2] != '0': #проверка, что чел не занят
+        await member.send(f"Вы сейчас не можете гулять. Ваше текущее занятие: {record[0][2]}")
+        print(f"{datetime.now()} {ctx.message.author} не может сейчас работать, он: {record[0][2]}")
+        return
+    else:
+        cur.execute(f"UPDATE char SET activity = 'работает' WHERE user_id = {record[0][0]}")
+        con.commit()
+
+    if record[0][1] <= 14:  #Проверка на лвл
+        max_coin = 3
+    elif record[0][1] >= 15 and record[0][1] < 26:
+        max_coin = 10
+    elif record[0][1] >= 26 and record[0][1] < 31:
+        max_coin = 20
+    elif record[0][1] >= 31 and record[0][1] < 35:
+        max_coin = 30
+    elif record[0][1] >= 35 and record[0][1] < 40:
+        max_coin = 35
+    elif record[0][1] >= 40 and record[0][1] < 45:
+        max_coin = 40
+    elif record[0][1] <= 45:
+        max_coin = 50
+    else:
+        max_coin = 0 #Если лвл какой-то неправильный, даем ноль денег
+
+    if max_coin == 3: #По сути с 0 до 14 лвл будет давать 1 coin
+        xp = 1 
+    elif max_coin == 0:
+        xp = 0 #Если лвл какой-то неправильный, даем ноль опыта
+    else: #если чел больше 14 лвл, рандомно даем опыта
+        max_coin = max_xp + random.randint( -5, 2)
+        xp = max_xp + random.randint( -5, -3)
+
+    walk_list = [
+        "Надо немного поработать",
+        "Я каменщик, работаю три дня и еще ХОЧУ!",
+        'Как же иногда хочется стать безработным и реинкарнировать и написать свою историю "о приключениях в другом мире"\nНо сегодня - надо работать',
+        "Я уникальный человек! Они меня заставляют заниматься черным трудом, да еще и в подземелье..",
+        "В подземелье я пойду и кристалы я найду!"
+        "Взял кредит - заставили пахать на горнодобывающую компанию вместе с каким то ящером.",
+        "Сегодня пришёл на работу с нарисованными усами... Женщины, с нарисованными бровями сказали, что я дурак.",
+        "ДА ВЫ ЧТО???\nМошенничество?!\nМахинации?!?!\nДа вы подходите нашему банку!",
+        "Ты пришёл в строительную компанию и спросил, нужна ли с чем то помощь. Тебе заплатят через 5 минут, что бы ты ушёл.",
+        "Какой же трудный рабочий день... Работодатели вообще вкурсе что мы работаем ради денег, а не ради работы?",
+        "Давай поработаем...",
+        "Опять работа?",
+    ]
+
+    scheduler = AsyncIOScheduler()
+
+    async def job_time():
+        print("НУЖНЫЙ ПРИНТ")
+        cur.execute(f"UPDATE char SET exp = exp + {xp}, coins = coins + {max_coin}, activity = 0 WHERE user_id = {record[0][0]}")
+        con.commit() 
+        await member.send(f"За работу, Вам начисленно {xp} опыта и {max_coin} монет !")
+        neeewlvl(member_id)
+        scheduler.shutdown()
+
+
+    date_now = datetime.now()
+    five_minut = date_now + timedelta(seconds=60*5)
+    scheduler.add_job(job_time, trigger='cron', minute=five_minut.minute)
+    scheduler.start()
+    await member.send(random.choice(walk_list))
+
+
+
+
+
+
+
+@bot.command()
+# @has_permissions(administrator = True)
 async def walk(ctx):
     print(f"{datetime.now()} {ctx.message.author} решил пойти погулять") #Серьезно? Это тоже?
     member_id = ctx.message.author.id
@@ -297,7 +380,7 @@ async def walk(ctx):
     if max_xp == 3: #По сути с 0 до 14 лвл будет давать 1 coin
         coin = 1 
     elif max_xp == 0:
-        coin = 0 #Если лвл какой-то неправильный, даем ноль опыта
+        coin = 0 #Если лвл какой-то неправильный, даем ноль денег
     else: #если чел больше 14 лвл, рандомно даем денег
         max_xp = max_xp + random.randint( -5, 2)
         coin = max_xp + random.randint( -5, -3)
@@ -315,7 +398,7 @@ async def walk(ctx):
         print("НУЖНЫЙ ПРИНТ")
         cur.execute(f"UPDATE char SET exp = exp + {max_xp}, coins = coins + {coin}, activity = 0 WHERE user_id = {record[0][0]}")
         con.commit() 
-        await member.send(f"Вам начисленно {max_xp} опыта и {coin} монет !")
+        await member.send(f"За прогулку, вам начисленно {max_xp} опыта и {coin} монет !")
         neeewlvl(member_id)
         scheduler.shutdown()
 
