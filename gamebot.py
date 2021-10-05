@@ -240,6 +240,7 @@ async def battle():
         )
         await reports.send(embed=embed)
         cur.execute(f"UPDATE battle SET deffens = 0,driadas_atack = 0, neko_atack = 0, people_atack = 0, dragons_atack = 0") 
+        cur.execute(f"UPDATE char SET figh = '0'") #обнуляем у всех статусы битв
         con.commit() #Окончание работы с бд
 
 
@@ -265,12 +266,13 @@ async def on_ready():
 
 @bot.command()
 # @has_permissions(administrator = True)
-async def gb(ctx, Direction: str ):#Битвы
+async def gb(ctx, Direction: str ): #Битвы
     member_id = ctx.message.author.id
     member = ctx.message.author
+    print(f"{datetime.now()} {member} пытается зарегаться на битву против {Direction}") #ПРИНТЫ
     cur.execute(f"SELECT id, race, figh, hp, max_hp, level, attack, deffens FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
     record = cur.fetchall()
-    raceemoji = ["🐱","🐉","🍀","🧙"]
+    #raceemoji = ["🐱","🐉","🍀","🧙"] наработка на будущее
     race = ["Зверолюди", "Драконы", "Дриады", "Люди"]
     racestatus = ["Атакует зверолюдей", "Атакует драконов", "Атакует дриад", "Атакует людей", "Защищает свою фракцию"] 
     raceattak = ["neko_atack", "dragons_atack", "driadas_atack", "people_atack"]
@@ -284,7 +286,7 @@ async def gb(ctx, Direction: str ):#Битвы
         figh = i[2]
     try:
         if int(figh) == 0:
-            print("Все ок")
+            print(f"{datetime.now()} {member} прошел try")
     except ValueError:
         await member.send("Вы уже участвуйте в битве")
         return
@@ -294,12 +296,12 @@ async def gb(ctx, Direction: str ):#Битвы
         return
 
     if Direction == record[0][1]:
-        #await member.send("Вы не можете напасть на свою расу")
         power = (attack*deffens/2)/2/max_hp*hp
         print(power)
         cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
         cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
         con.commit()
+        print(f"{datetime.now()} {member} {racestatus[4]}") #ПРИНТЫ
         return
 
     if Direction not in race:
@@ -312,6 +314,9 @@ async def gb(ctx, Direction: str ):#Битвы
     cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{Direction}'")
     cur.execute(f"UPDATE char SET figh = '{racestatus[status_attack]}' WHERE user_id = {record[0][0]}")
     con.commit()
+    print(f"{datetime.now()} {member} {racestatus[status_attack]}")
+
+    await member.send(f"Вы записались на битву. Стаутус: {racestatus[status_attack]}")
 
 
 
