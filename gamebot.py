@@ -389,7 +389,6 @@ async def job(ctx):
     scheduler = AsyncIOScheduler()
 
     async def job_time():
-        print("НУЖНЫЙ ПРИНТ")
         cur.execute(f"UPDATE char SET exp = exp + {xp}, coins = coins + {max_coin}, activity = 0 WHERE user_id = {record[0][0]}")
         con.commit() 
         await member.send(f"За работу, Вам начисленно {xp} опыта и {max_coin} монет !")
@@ -779,59 +778,49 @@ async def on_message(message):
 
 @bot.command()
 async def top(ctx):
+    member_id = ctx.message.author.id
+    raceemoji = ["🐱","🐉","🍀","🧙"]
+    racelist = ("Зверолюди", "Драконы", "Дриады", "Люди")
     info_kubki = cur.execute(f"SELECT * FROM battle")
+    top_user = ("1", "2", "3", "4", "5")
+    top_user = list(top_user)
+    b = 0
     top = {"Дриады": 0, "Драконы": 0, "Зверолюди": 0, "Люди": 0}
     a = ["Дриады", "Драконы", "Зверолюди", "Люди"]
-    b = 0
     for i in info_kubki:
         top[a[b]] = i[6]
         b += 1
     sorted_battle_top = sorted(top.items(), key=operator.itemgetter(1))
     top_fraction = f"1. {sorted_battle_top[3][0]} - {sorted_battle_top[3][1]}🏆\n2. {sorted_battle_top[2][0]} - {sorted_battle_top[2][1]}🏆\n3. {sorted_battle_top[1][0]} - {sorted_battle_top[1][1]}🏆\n4. {sorted_battle_top[0][0]} - {sorted_battle_top[0][1]}🏆"
-    embed = discord.Embed(
-        title = "🏆Топ рас🏆:",
+    embed1 = discord.Embed(
+        title = "🏆 Топ рас 🏆:",
         description = f"{top_fraction}",
         colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     )
-    await ctx.send(embed=embed)
+    await ctx.send(embed=embed1)
+    cur.execute('SELECT * FROM (SELECT ROW_NUMBER() OVER ( ORDER BY exp DESC) RowNum, user_id, exp, level FROM char) t WHERE RowNum <= 5')
+    record = cur.fetchall()
 
-
-
-
-@bot.command()#топ по опыту
-async def topexp(ctx):
-    with sq.connect('DataBase.db') as con:
-        cur = con.cursor()
-        cur.execute('SELECT * FROM char WHERE user_id>0 ORDER BY exp DESC')
-        record = cur.fetchall()
-        cur.execute('SELECT * FROM users WHERE id>0 ORDER BY id')
-        record2 = cur.fetchall()
-        member_id = ctx.message.author.id
-        top = []
-        mesto = []
-        fraction = {"Дриады": "🍀", "Драконы": "🐉", "Зверолюди": "🐱", "Люди": "🧙"}
-        for i in record:
-            top.append(record.index(i) + 1)
-            top.append(fraction[record2[record.index(i)][5]])
-            top.append(record2[record.index(i)][3])
-            top.append(record[record.index(i)][3])
-            top.append(record[record.index(i)][4])
-            if record2[record.index(i)][1] == member_id:
-                mesto.append(round((len(top))/5))
-                mesto.append(fraction[record2[record.index(i)][5]])
-                mesto.append(record2[record.index(i)][3])
-                mesto.append(record[record.index(i)][3])
-                mesto.append(record[record.index(i)][4])
-            else:
-                pass
-        topmsg = f"{top[0]}. {top[1]}{top[2]} 🔮{top[3]} ✨{top[4]}\n{top[5]}. {top[6]}{top[7]} 🔮{top[8]} ✨{top[9]}\n{top[10]}. {top[11]}{top[12]} 🔮{top[13]} ✨{top[14]}\n{top[15]}. {top[16]}{top[17]} 🔮{top[18]} ✨{top[19]}\n{top[20]}. {top[21]}{top[22]} 🔮{top[23]} ✨{top[24]}\n\nВаше место:\n {mesto[0]}. {mesto[1]}{mesto[2]} 🔮{mesto[3]} ✨{mesto[4]}"
-        embed = discord.Embed(
-            title = "🏆Топ по уровню:",
-            description = f"{topmsg}",
-            colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-        )
-        await ctx.send(embed=embed)
-        con.commit()
+    for y in range(6):
+        if y == 5:
+            cur.execute(f'SELECT * FROM (SELECT ROW_NUMBER() OVER ( ORDER BY exp DESC) RowNum, user_id, level, exp FROM char) WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})')
+            position = cur.fetchall()
+            cur.execute(f'SELECT name, race FROM users WHERE id = {position[0][1]}')
+            users = cur.fetchall()
+            raceindex = racelist.index(users[0][1])
+            position = (f"{position[0][0]}. {raceemoji[raceindex]} {users[0][0]} 🔮 {position[0][3]} ✨ {position[0][2]}")
+        else:
+            cur.execute(f'SELECT name, race FROM users WHERE id = {record[y][1]}')
+            users = cur.fetchall()
+            raceindex = racelist.index(users[0][1])
+            top_user[y] = (f"{y+1}. {raceemoji[raceindex]} {users[0][0]} 🔮 {record[y][2]} ✨{record[y][3]}")
+    msg = (f"{top_user[0]}\n{top_user[1]}\n{top_user[2]}\n{top_user[3]}\n{top_user[4]}\n\n**Ваше место:**\n{position}")
+    embed2 = discord.Embed(
+        title = "🏆 Топ по уровню:",
+        description = f"{msg}",
+        colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+    )
+    await ctx.send(embed=embed2)
 
 print (f"{datetime.now()} BOT START")
 bot.run(settings['token']) #берем токен из конфига и стартуем
