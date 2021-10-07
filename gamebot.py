@@ -9,11 +9,13 @@ import sqlite3 as sq
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 #import datetime
-from datetime import timedelta
+from datetime import timede3lta
 from datetime import datetime
 import re
 import operator
 import random
+
+
 
 with sq.connect('DataBase.db') as con:
     cur = con.cursor()
@@ -460,7 +462,6 @@ async def walk(ctx):
     scheduler = AsyncIOScheduler()
 
     async def walk_time():
-        print("НУЖНЫЙ ПРИНТ")
         cur.execute(f"UPDATE char SET exp = exp + {max_xp}, coins = coins + {coin}, activity = 0 WHERE user_id = {record[0][0]}")
         con.commit() 
         await member.send(f"За прогулку, вам начисленно {max_xp} опыта и {coin} монет !")
@@ -798,7 +799,7 @@ async def top(ctx):
         colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     )
     await ctx.send(embed=embed1)
-    cur.execute('SELECT * FROM (SELECT ROW_NUMBER() OVER ( ORDER BY exp DESC) RowNum, user_id, exp, level FROM char) t WHERE RowNum <= 5')
+    cur.execute('SELECT * FROM (SELECT ROW_NUMBER() OVER (ORDER BY exp DESC) RowNum, user_id, exp, level FROM char) t WHERE RowNum <= 5')
     record = cur.fetchall()
 
     for y in range(6):
