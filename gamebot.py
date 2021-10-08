@@ -45,7 +45,8 @@ with sq.connect('DataBase.db') as con:
         "item_name" TEXT DEFAULT null,
         "item_type" TEXT DEFAULT null,
         "item_price"    INT DEFAULT 0,
-        "iteam_attak"   INT DEFAULT 0,
+        "item_attack"   INT DEFAULT 0,
+        "item_deffens"   INT DEFAULT 0,
         "item_luck" INT DEFAULT 0,
         "item_hp"   INT DEFAULT 0,
         "item_lvl"  INT DEFAULT 0
@@ -58,7 +59,8 @@ with sq.connect('DataBase.db') as con:
         "inv_name"  TEXT DEFAULT null,
         "inv_type"  TEXT DEFAULT null,
         "inv_price" INT DEFAULT 0,
-        "inv_attak" INT DEFAULT 0,
+        "inv_attack" INT DEFAULT 0,
+        "inv_deffens"   INT DEFAULT 0,
         "inv_luck"  INT DEFAULT 0,
         "inv_hp"    INT DEFAULT 0,
         "inv_lvl"   INT DEFAULT 0
@@ -129,6 +131,65 @@ async def ml(ctx):
 
 
 
+
+
+
+@bot.command()
+@has_permissions(administrator = True)
+async def equip(ctx, check_item_id: str):
+    member_id = ctx.message.author.id
+    slot_list = ("slot_first_hand", "slot_second_hand", "slot_head", "slot_foots", "slot_cheast", "slot_accessory")
+    search = {
+            1: ("Меч", "Булава", "Лук", "Одноручное", "Двуручное"),
+            2: ("Щит", "Одноручное оружие"),
+            3: ("Каска", "Шапка"),
+            4: ("Тапочки", "Обувь"),
+            5: ("Футболка"),
+            6: ("Артефакт")
+        }
+    flag = True
+
+    cur.execute(f"SELECT * from inv WHERE inv_id = '{check_item_id}' AND inv_owner_id = (SELECT user_id FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}'))")
+    record = cur.fetchall()
+    if len(record) == 0:
+        await ctx.channel.send("У вас нету такого предмета ")
+        return
+
+    item_id = record2[0][0]
+    item_owner_id = record2[0][2]
+    item_name = record2[0][3]
+    item_type = record2[0][4]
+    item_attack = record2[0][6]
+    item_deffens = record2[0][7]
+    item_luck = record2[0][8]
+    item_hp = record2[0][9]
+    item_lvl = record2[0][10]
+
+    cur.execute(f"SELECT level FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})")
+    record2 = cur.fetchall()
+
+    if record2[0][0] <= item_lvl:
+        await ctx.channel.send("Вы не можете использовать этот предмет, его уровень больше Вашего")
+        return
+    for x in search:
+        if item_type in search[x]:
+            select_slot = x
+            flag = False
+            break
+    if flag:
+        await ctx.channel.send("Ваш item был поврежден. Обратитесь к администрации")
+        return
+
+    cur.execute(f"UPDATE char SET {slot_list[select_slot-1]} = item_id WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
+    con.commit()
+
+    print("Закончил работу")
+
+
+
+
+
+
 @bot.command()
 async def profile(ctx):
     member_id = ctx.message.author.id
@@ -151,7 +212,7 @@ async def profile(ctx):
             lol[x] = "пусто"    #если слот пустой, так и пишем
         else: 
             search_item = lol[x]
-            cur.execute(f"SELECT item_name FROM item WHERE item_id = {search_item}")    #если в слоте есть предмет ищем его название
+            cur.execute(f"SELECT inv_name FROM inv WHERE inv_id = {search_item}")    #если в слоте есть предмет ищем его название
             search_item = cur.fetchall()
             lol[x] = search_item[0][0]
             con.commit()
@@ -509,24 +570,17 @@ async def giveitem(ctx, opponent:discord.Member, item_id: str):
 @has_permissions(administrator = True)
 async def inv(ctx):
     opponent = ctx.message.author.id
-    with sq.connect('DataBase.db') as con:
-        cur = con.cursor()
-        cur.execute(f"SELECT * FROM users WHERE discord_id = {opponent}")
-        record = cur.fetchall()
-        if len(record) == 0:
-            await ctx.send(f"Инвентарь пуст")
-            con.commit()
-            return
-        for i in record: #Если записи есть - сохраняем
-            owner_id = i[0]
-        cur.execute(f"SELECT * FROM inv WHERE inv_owner_id = '{owner_id}'")
-        record = cur.fetchall()
-        for i in record: #Если записи есть - сохраняем
-            inv_name = i[3]
-            inv_type = i[4]
-            text = (f"{inv_name} | {inv_type} |  | ")
-            await ctx.send(f"{text}")
-        con.commit()
+    cur.execute(f"SELECT * from inv WHERE inv_owner_id = (SELECT user_id FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = '{opponent}'))")
+    record = cur.fetchall()
+    if len(record) == 0:
+        await ctx.send(f"Инвентарь пуст")
+        return
+    for i in record: #Если записи есть - сохраняем
+        inv_id = i[0]
+        inv_name = i[3]
+        inv_type = i[4]
+        text = (f"ID: {inv_id} | {inv_name} | {inv_type} ")
+        await ctx.send(f"{text}")
 
 
 
