@@ -9,7 +9,7 @@ import sqlite3 as sq
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 #import datetime
-from datetime import timede3lta
+from datetime import timedelta
 from datetime import datetime
 import re
 import operator
@@ -770,7 +770,7 @@ async def on_message(message):
         return
     else:
         if bot.user in message.mentions:
-            await message.channel.send('kira seed started')
+            await message.channel.send('Бот в разработке')
 
     await bot.process_commands(message)
 
