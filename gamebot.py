@@ -155,15 +155,15 @@ async def equip(ctx, check_item_id: str):
         await ctx.channel.send("У вас нету такого предмета ")
         return
 
-    item_id = record2[0][0]
-    item_owner_id = record2[0][2]
-    item_name = record2[0][3]
-    item_type = record2[0][4]
-    item_attack = record2[0][6]
-    item_deffens = record2[0][7]
-    item_luck = record2[0][8]
-    item_hp = record2[0][9]
-    item_lvl = record2[0][10]
+    item_id = record[0][0]
+    item_owner_id = record[0][2]
+    item_name = record[0][3]
+    item_type = record[0][4]
+    item_attack = record[0][6]
+    item_deffens = record[0][7]
+    item_luck = record[0][8]
+    item_hp = record[0][9]
+    item_lvl = record[0][10]
 
     cur.execute(f"SELECT level FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})")
     record2 = cur.fetchall()
