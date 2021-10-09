@@ -108,8 +108,9 @@ bot = commands.Bot(command_prefix = settings['prefix'], intents = intents) #пр
 
 @bot.command()
 async def help(ctx):
-    #Тестовые команды
-    embed = discord.Embed(colour=discord.Colour(0xf5a623))
+    member = ctx.message.author
+    print(f"{datetime.now()} {member} вызвал help") #ПРИНТЫ
+    embed = discord.Embed(colour=discord.Colour(0x417505))
 
     embed.set_footer(text="👁️ - адмниские или закрытые команды")
     embed.add_field(name="help", value="Вызывает этот текст")
