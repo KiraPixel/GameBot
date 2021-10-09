@@ -108,7 +108,23 @@ bot = commands.Bot(command_prefix = settings['prefix'], intents = intents) #пр
 
 @bot.command()
 async def help(ctx):
-    await ctx.channel.send("Команда в разработке")
+    #Тестовые команды
+    embed = discord.Embed(colour=discord.Colour(0xf5a623))
+
+    embed.set_footer(text="👁️ - адмниские или закрытые команды")
+    embed.add_field(name="help", value="Вызывает этот текст")
+    embed.add_field(name="profile", value="Посмотреть Ваш профиль ")
+    embed.add_field(name="inventory", value="Посмотреть Ваш инвентарь")
+    embed.add_field(name="gb (Раса)", value="Отправиться на битву против расы \nЕсли вы хотите встать на защиту - напиште название вашей расы")
+    embed.add_field(name="equip (id предмета)", value="Позволяет надеть предмет/одежду")
+    embed.add_field(name="job", value="Вы оправитесь в прогулку и получаете опыт и немного денег")
+    embed.add_field(name="walk", value="Вы оправитесь в прогулку и получаете денег и немного опыт")
+    embed.add_field(name="👁️ createguild (название гильдии)", value="Создайте вашу гильдию!\nУчтите, что вы можете пригласить только людей вашей расы!")
+    embed.add_field(name="👁️ inviteguild (пинг человека; название гильдии)", value="Создайте вашу гильдию!\nУчтите, что вы можете пригласить только людей вашей расы!")
+    embed.add_field(name="👁️ say (текст)", value="Отправить текст от имени бота")
+    embed.add_field(name="👁️ sayto (канал; текст)", value="Отправить текст от имени бота в определенный канал")
+    embed.add_field(name="👁️ sayto (пинг; id item)", value="Выдать предмет определенному человеку")
+    await ctx.channel.send(embed=embed)
 
 
 def neeewlvl(member_id):
@@ -138,6 +154,7 @@ async def ml(ctx):
 @has_permissions(administrator = True)
 async def equip(ctx, check_item_id: str):
     member_id = ctx.message.author.id
+    flag = True
     slot_list = ("slot_first_hand", "slot_second_hand", "slot_head", "slot_foots", "slot_cheast", "slot_accessory")
     search = {
             1: ("Меч", "Булава", "Лук", "Одноручное", "Двуручное"),
@@ -145,16 +162,13 @@ async def equip(ctx, check_item_id: str):
             3: ("Каска", "Шапка"),
             4: ("Тапочки", "Обувь"),
             5: ("Футболка"),
-            6: ("Артефакт")
-        }
-    flag = True
+            6: ("Артефакт", "Кольцо", "Кулон", "Повязка")        }
 
-    cur.execute(f"SELECT * from inv WHERE inv_id = '{check_item_id}' AND inv_owner_id = (SELECT user_id FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}'))")
+    cur.execute(f"SELECT * from inv WHERE inv_id = '{check_item_id}' AND inv_owner_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
     record = cur.fetchall()
     if len(record) == 0:
         await ctx.channel.send("У вас нету такого предмета ")
         return
-
     item_id = record[0][0]
     item_owner_id = record[0][2]
     item_name = record[0][3]
@@ -167,7 +181,6 @@ async def equip(ctx, check_item_id: str):
 
     cur.execute(f"SELECT level FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})")
     record2 = cur.fetchall()
-
     if record2[0][0] <= item_lvl:
         await ctx.channel.send("Вы не можете использовать этот предмет, его уровень больше Вашего")
         return
@@ -567,8 +580,7 @@ async def giveitem(ctx, opponent:discord.Member, item_id: str):
 
 
 @bot.command()
-@has_permissions(administrator = True)
-async def inv(ctx):
+async def inventory(ctx):
     opponent = ctx.message.author.id
     cur.execute(f"SELECT * from inv WHERE inv_owner_id = (SELECT user_id FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = '{opponent}'))")
     record = cur.fetchall()
@@ -613,7 +625,7 @@ async def createguild(ctx, groupname: str):
             #пермишионы для нового чата
             overwrites = {
                 guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                new_group: discord.PermissionOverwrite(read_messages=True)
+                new_group: discord.PermissionOverwrite(read_messages=True, send_messages = True)
             }
 
             #Создаем канал в специально категории
@@ -853,9 +865,9 @@ async def top(ctx):
         colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     )
     await ctx.send(embed=embed1)
+
     cur.execute('SELECT * FROM (SELECT ROW_NUMBER() OVER (ORDER BY exp DESC) RowNum, user_id, exp, level FROM char) t WHERE RowNum <= 5')
     record = cur.fetchall()
-
     for y in range(6):
         if y == 5:
             cur.execute(f'SELECT * FROM (SELECT ROW_NUMBER() OVER ( ORDER BY exp DESC) RowNum, user_id, level, exp FROM char) WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})')
