@@ -113,13 +113,14 @@ async def help(ctx):
     embed = discord.Embed(colour=discord.Colour(0x417505))
 
     embed.set_footer(text="👁️ - адмниские или закрытые команды")
-    embed.add_field(name="help", value="Вызывает этот текст")
+    embed.add_field(name="help", value="Вызывает эту подсказку")
     embed.add_field(name="profile", value="Посмотреть Ваш профиль ")
     embed.add_field(name="inventory", value="Посмотреть Ваш инвентарь")
-    embed.add_field(name="gb (Раса)", value="Отправиться на битву против расы \nЕсли вы хотите встать на защиту - напиште название вашей расы")
+    embed.add_field(name="gb (Раса)", value="Вы отправитесь на битву против написанной расы \nЕсли вы хотите встать на защиту Вашей расы - напиште её название")
     embed.add_field(name="equip (id предмета)", value="Позволяет надеть предмет/одежду")
-    embed.add_field(name="job", value="Вы оправитесь в прогулку и получаете опыт и немного денег")
-    embed.add_field(name="walk", value="Вы оправитесь в прогулку и получаете денег и немного опыт")
+    embed.add_field(name="job", value="Вы оправитесь на прогулку и получите опыт и немного денег")
+    embed.add_field(name="walk", value="Вы оправитесь на поиски подработки и получите денеги и немного опыта")
+    embed.add_field(name="👁️ aprofile (id человека)", value="Посмотреть профиль определенного человека")
     embed.add_field(name="👁️ createguild (название гильдии)", value="Создайте вашу гильдию!\nУчтите, что вы можете пригласить только людей вашей расы!")
     embed.add_field(name="👁️ inviteguild (пинг человека; название гильдии)", value="Создайте вашу гильдию!\nУчтите, что вы можете пригласить только людей вашей расы!")
     embed.add_field(name="👁️ say (текст)", value="Отправить текст от имени бота")
@@ -129,7 +130,7 @@ async def help(ctx):
 
 
 def neeewlvl(member_id):
-    print(member_id)
+    print(f"{datetime.now()} {member_id} просчет опыта") #ПРИНТЫ
     cur = con.cursor()
     cur.execute(f"SELECT user_id, level, exp FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})") #Получаем user_id, level, exp
     record = cur.fetchall()
@@ -152,8 +153,9 @@ async def ml(ctx):
 
 
 @bot.command()
-@has_permissions(administrator = True)
+#@has_permissions(administrator = True)
 async def equip(ctx, check_item_id: str):
+    print(f"{datetime.now()} {ctx.message.author} пытается одеть item_id: {check_item_id}") #ПРИНТЫ
     member_id = ctx.message.author.id
     flag = True
     slot_list = ("slot_first_hand", "slot_second_hand", "slot_head", "slot_foots", "slot_cheast", "slot_accessory")
@@ -163,22 +165,22 @@ async def equip(ctx, check_item_id: str):
             3: ("Каска", "Шапка"),
             4: ("Тапочки", "Обувь"),
             5: ("Футболка"),
-            6: ("Артефакт", "Кольцо", "Кулон", "Повязка")        }
+            6: ("Артефакт", "Кольцо", "Кулон", "Повязка")}
 
-    cur.execute(f"SELECT * from inv WHERE inv_id = '{check_item_id}' AND inv_owner_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
+    cur.execute(f"SELECT inv_id, inv_owner_id, inv_name, inv_type, inv_attack, inv_deffens, inv_luck, inv_hp, inv_lvl from inv WHERE inv_id = '{check_item_id}' AND inv_owner_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
     record = cur.fetchall()
     if len(record) == 0:
         await ctx.channel.send("У вас нету такого предмета ")
         return
     item_id = record[0][0]
-    item_owner_id = record[0][2]
-    item_name = record[0][3]
-    item_type = record[0][4]
-    item_attack = record[0][6]
-    item_deffens = record[0][7]
-    item_luck = record[0][8]
-    item_hp = record[0][9]
-    item_lvl = record[0][10]
+    item_owner_id = record[0][1]
+    item_name = record[0][2]
+    item_type = record[0][3]
+    item_attack = record[0][4]
+    item_deffens = record[0][5]
+    item_luck = record[0][6]
+    item_hp = record[0][7]
+    item_lvl = record[0][8]
 
     cur.execute(f"SELECT level FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})")
     record2 = cur.fetchall()
@@ -193,19 +195,55 @@ async def equip(ctx, check_item_id: str):
     if flag:
         await ctx.channel.send("Ваш item был поврежден. Обратитесь к администрации")
         return
+    cur.execute(f"UPDATE char SET {slot_list[select_slot-1]} = {item_id} WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
+    con.commit()
+    print(f"{datetime.now()} {ctx.message.author} смог одеть {item_name}") #ПРИНТЫ
 
-    cur.execute(f"UPDATE char SET {slot_list[select_slot-1]} = item_id WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
+
+@bot.command()
+@has_permissions(administrator = True)
+async def aprofile(ctx, member_id: str):
+    print(f"{datetime.now()} {ctx.message.author} смотрит свой профиль") #ПРИНТЫ
+    cur.execute(f"SELECT id, name, level, hp, max_hp, coins, attack, deffens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand, activity, figh, exp FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем кучу дерьма
+    record = cur.fetchall()
+    cur.execute(f"SELECT exp_exp FROM exp WHERE exp_lvl = {record[0][2]} + 1")
+    next_exp = cur.fetchall()
     con.commit()
 
-    print("Закончил работу")
+    status = (record[0][14], record[0][15])
+    status = list(status)
+    if status[0] == '0':
+        status[0] = "свободен"
+    if status[1] == '0':
+        status[1] = "отдыхает"
 
+    lol = list(record[0][8:])
+    for x in range(6):      #разгребаем дерьмо инвентаря
+        if lol[x] == 0:
+            lol[x] = "пусто"    #если слот пустой, так и пишем
+        else: 
+            search_item = lol[x]
+            cur.execute(f"SELECT inv_name FROM inv WHERE inv_id = {search_item}")    #если в слоте есть предмет ищем его название
+            search_item = cur.fetchall()
+            lol[x] = search_item[0][0]
+            con.commit()
+    
 
-
+    value1 = f"✨ LVL: {record[0][2]}\n🔮 EXP: {record[0][16]}/{next_exp[0][0]}\n❤️ HP: {record[0][3]}/{record[0][4]} \n💰 Деньги: {record[0][5]}\n🗡️ Атака: {record[0][6]} \n🛡️ Защита: {record[0][7]}\n \n "
+    value2 = f"🧢Голова: {lol[0]}\n👕 Тело: {lol[1]}\n🦵 Ноги: {lol[2]}\n📿Аксессуар: {lol[3]} \n🤚 Левая рука: {lol[4]}\n✋ Правая рука: {lol[5]}"
+    statusvalue = f"Занятие: {status[0]} | Бой: {status[1]}"
+    embed = discord.Embed(colour=discord.Colour(0x8bc85a), description=f"Ник: {record[0][1]} | ID: {record[0][0]}")
+    embed.set_author(name="Игровой профиль")
+    embed.set_footer(text=statusvalue)
+    embed.add_field(name="Инфо:", value=value1)
+    embed.add_field(name="\nСлоты:", value=value2)
+    await ctx.author.send(embed=embed)
 
 
 
 @bot.command()
 async def profile(ctx):
+    print(f"{datetime.now()} {ctx.message.author} смотрит свой профиль") #ПРИНТЫ
     member_id = ctx.message.author.id
     cur.execute(f"SELECT id, name, level, hp, max_hp, coins, attack, deffens, slot_head, slot_chest, slot_foots, slot_accessory, slot_first_hand, slot_second_hand, activity, figh, exp FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем кучу дерьма
     record = cur.fetchall()
@@ -230,10 +268,10 @@ async def profile(ctx):
             search_item = cur.fetchall()
             lol[x] = search_item[0][0]
             con.commit()
-        
+    
 
     value1 = f"✨ LVL: {record[0][2]}\n🔮 EXP: {record[0][16]}/{next_exp[0][0]}\n❤️ HP: {record[0][3]}/{record[0][4]} \n💰 Деньги: {record[0][5]}\n🗡️ Атака: {record[0][6]} \n🛡️ Защита: {record[0][7]}\n \n "
-    value2 = f"🧢Голова: {lol[0]}\n👕 Тело: {lol[1]}\n🦵 Ноги: {lol[0]}\n📿Аксессуар: {lol[2]} \n🤚 Левая рука: {lol[3]}\n✋ Правая рука: {lol[4]}"
+    value2 = f"🧢Голова: {lol[0]}\n👕 Тело: {lol[1]}\n🦵 Ноги: {lol[2]}\n📿Аксессуар: {lol[3]} \n🤚 Левая рука: {lol[4]}\n✋ Правая рука: {lol[5]}"
     statusvalue = f"Занятие: {status[0]} | Бой: {status[1]}"
     embed = discord.Embed(colour=discord.Colour(0x8bc85a), description=f"Ник: {record[0][1]} | ID: {record[0][0]}")
     embed.set_thumbnail(url=ctx.message.author.avatar_url)
@@ -340,7 +378,6 @@ async def on_ready():
 
 
 
-
 @bot.command()
 # @has_permissions(administrator = True)
 async def gb(ctx, Direction: str ): #Битвы
@@ -374,11 +411,11 @@ async def gb(ctx, Direction: str ): #Битвы
 
     if Direction == record[0][1]:
         power = (attack*deffens/2)/2/max_hp*hp
-        print(power)
         cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
         cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
         con.commit()
         print(f"{datetime.now()} {member} {racestatus[4]}") #ПРИНТЫ
+        await member.send(f"Вы встали на защиту вашей расы")
         return
 
     if Direction not in race:
@@ -559,10 +596,11 @@ async def walk(ctx):
 @bot.command()
 @has_permissions(administrator = True)
 async def giveitem(ctx, opponent:discord.Member, item_id: str):
+    print(f"{datetime.now()} {ctx.message.author} выдает предмет {item_id} {opponent}") #ПРИНТЫ
     opponent = opponent.id
     with sq.connect('DataBase.db') as con:
         cur = con.cursor()
-        cur.execute(f"SELECT * FROM item WHERE item_id = '{item_id}'") #получаем инфу о предмете
+        cur.execute(f"SELECT item_name, item_type, item_price, item_attack, item_deffens, item_luck, item_hp, item_lvl FROM item WHERE item_id = '{item_id}'") #получаем инфу о предмете
         record = cur.fetchall()
         cur.execute(f"SELECT * FROM users WHERE discord_id = {opponent}") #пробиваем оппенента 
         record2 = cur.fetchall()
@@ -570,7 +608,8 @@ async def giveitem(ctx, opponent:discord.Member, item_id: str):
             await ctx.send(f"{'Участник' if len(record2) == 0 else 'Item'} не найден")
             con.commit()
             return
-        cur.execute(f"INSERT INTO inv (inv_owner_id, inv_name, inv_type, inv_price, inv_attak, inv_luck, inv_hp, inv_lvl) VALUES(?, ?, ?, ?, ?, ?, ?, ?)",[record2[0][0], *record[0][1:]]) #записываем в базу всю инфу
+        print(record[0][1:])
+        cur.execute(f"INSERT INTO inv (inv_owner_id, inv_name, inv_type, inv_price, inv_attack, inv_deffens, inv_luck, inv_hp, inv_lvl) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",[record2[0][0], *record[0][0:]]) #записываем в базу всю инфу
         con.commit()
     await ctx.send(f"Предмет выдан")
     print("Предмет выдан")
@@ -582,19 +621,24 @@ async def giveitem(ctx, opponent:discord.Member, item_id: str):
 
 @bot.command()
 async def inventory(ctx):
+    print(f"{datetime.now()} {ctx.message.author} смотрит свой инвентарь") #ПРИНТЫ
     opponent = ctx.message.author.id
+    member = ctx.message.author
     cur.execute(f"SELECT * from inv WHERE inv_owner_id = (SELECT user_id FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = '{opponent}'))")
     record = cur.fetchall()
     if len(record) == 0:
         await ctx.send(f"Инвентарь пуст")
         return
+
+    embed = discord.Embed(title = f"Инвентарь {member}", colour=discord.Colour(0x417505))
     for i in record: #Если записи есть - сохраняем
         inv_id = i[0]
         inv_name = i[3]
         inv_type = i[4]
-        text = (f"ID: {inv_id} | {inv_name} | {inv_type} ")
-        await ctx.send(f"{text}")
+        embed.add_field(name=f"{inv_name} ", value=f"ID: {inv_id} | Тип: {inv_type}", inline=False)
 
+    embed.set_footer(text="👁️ - адмниские или закрытые команды")
+    await ctx.channel.send(embed=embed)
 
 
 
@@ -733,6 +777,8 @@ async def sayto(ctx, channel:discord.TextChannel, *, text):
 
 
 
+
+
 @bot.event
 async def on_message(message):
     msg = message.content.lower()
@@ -747,6 +793,7 @@ async def on_message(message):
             guild = bot.get_guild(890003889858957382)
             member = guild.get_member(au_user.id)
             emoji = ["🍀","🧙","🐉","🐱"]
+            race = ["Дриады", "Люди", "Драконы", "Зверолюди"]
             kira = guild.get_member(276766244093296640)
             id_role = [890283323224625212, 890287397978402857, 890282890007568425, 890282541850968115, 890294463849726054]
             date_registr = datetime.now().date()
@@ -761,8 +808,33 @@ async def on_message(message):
                 con.commit()
             if len(record) != 0:
                 print(f"{au_user} попытался зарегистрироваться")
-                await au_user.send(f'Вы уже зарегистрированы\nВы можете получить список команд, прописав {command_prefix}help')
+                if get(member.roles, name="Игрок"):
+                    await au_user.send(f'Вы уже зарегистрированы\nВы можете получить список команд, прописав {command_prefix}help')
+                else:
+                    print(f"{datetime.now()} {au_user} начал reregistation")
+                    cur.execute(f"SELECT name, race, groups FROM users WHERE discord_id = {searchuser}") 
+                    rereguser = cur.fetchall()
+                    cur.execute(f"SELECT group_name FROM groups WHERE group_id = {rereguser[0][2]}")
+                    group = cur.fetchall()
+                    role = discord.utils.get(guild.roles, name = f"{rereguser[0][1]}") #находим роль на сервере
+                    await member.add_roles(role) # выдаем роль
+                    role_gamer = discord.utils.get(guild.roles, id = 890294463849726054) #находим роль на сервере
+                    await member.add_roles(role_gamer) # выдаем роль
+                    groups = f"{rereguser[0][2]}"
+                    emoji_post = emoji[race.index(str(role))]
+                    if len(group) != 0:
+                        rolegroup = discord.utils.get(guild.roles, name = f"{group[0][0]}") #находим роль на сервере
+                        await member.add_roles(rolegroup) # выдаем роль
+                        print(f"{au_user} была выдана роль гильдии {rolegroup}")
+                    if member != kira: #Изменяем ник + проверка от Киры
+                        newnick = (f"{str(emoji_post)}{rereguser[0][0]}")
+                        await member.edit(nick=newnick)
+                        print(f"Никнейм был заменен с {au_user} на {newnick}")
+                        print(f"{datetime.now()} reregistation {au_user} завершена")
+                    else:
+                        print(f"{datetime.now()} {kira} пытался зарегаться, но он слишком крутой, что бы я поменял ему ник :(")
                 return
+
 
             #ПРИНТ И ОТПРАВКА, ПРИКИНЬ
             print(f"{datetime.now()} Начало регистрации {au_user}")
@@ -803,7 +875,6 @@ async def on_message(message):
                 newnick = (f"{str(reaction)}{nick}")
                 await member.edit(nick=newnick)
                 print(f"{datetime.now()} Никнейм был заменен с {au_user} на {newnick}")
-                
             else:
                 print(f"{datetime.now()} {kira} пытался зарегаться, но он слишком крутой, что бы я поменял ему ник :(")
 
@@ -846,6 +917,7 @@ async def on_message(message):
 
 @bot.command()
 async def top(ctx):
+    print(f"{datetime.now()} {ctx.message.author} смотрит топ") #ПРИНТЫ
     member_id = ctx.message.author.id
     raceemoji = ["🐱","🐉","🍀","🧙"]
     racelist = ("Зверолюди", "Драконы", "Дриады", "Люди")
