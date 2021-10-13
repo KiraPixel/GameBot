@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import Member
 from discord.ext.commands import has_permissions, MissingPermissions
+from discord_components import *
 from config import settings
 from discord.utils import get
 from asyncio import sleep
@@ -105,6 +106,35 @@ bot = commands.Bot(command_prefix = settings['prefix'], intents = intents) #пр
 #@commands.has_permissions( administrator = True )
 
 @bot.remove_command('help') #УДАЛЯЕМ СРАННЫЙ HELP
+
+
+
+# @bot.command() Заготовка
+# async def menu(ctx):
+#     await ctx.send(
+#         "Это кнопка!",
+#         components = [
+#             Button(label = 'Дриады!', emoji = '🍀'),
+#             Button(label = 'Зверолюди!', emoji = '🐱'),
+#             Button(label = 'Драконы!', emoji = '🐉'),
+#             Button(label = 'Люди!', emoji = '🧙')
+#         ]
+#     )
+#     while True:
+#         interaction = await bot.wait_for("button_click")
+#         if interaction.component.label == 'Дриады!':
+#             await interaction.respond(content = 'Вы выбрали дриад!')
+#         elif interaction.component.label == 'Люди!':
+#             await interaction.respond(content = 'Вы выбрали людей.')
+#         elif interaction.component.label == 'Зверолюди!':
+#             await interaction.respond(content = 'Вы выбрали зверолюдей.')
+#         elif interaction.component.label == 'Драконы!':
+#             await interaction.respond(content = 'Вы выбрали драконов.')
+#         print(interaction)
+#         print("Нажали на кнопку")
+#         await interaction.respond(content="Ты нажал на кнопку!")
+
+
 
 @bot.command()
 async def help(ctx):
@@ -373,6 +403,7 @@ async def on_ready():
     scheduler.add_job(battle, trigger='cron', hour='20', minute='00')
     scheduler.start()
 
+    DiscordComponents(bot)
 
 
 
@@ -380,57 +411,88 @@ async def on_ready():
 
 @bot.command()
 # @has_permissions(administrator = True)
-async def gb(ctx, Direction: str ): #Битвы
-    member_id = ctx.message.author.id
-    member = ctx.message.author
-    print(f"{datetime.now()} {member} пытается зарегаться на битву против {Direction}") #ПРИНТЫ
-    cur.execute(f"SELECT id, race, figh, hp, max_hp, level, attack, deffens FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
-    record = cur.fetchall()
+async def gb(ctx): #Битвы
+    member = ctx.message.author #получаем автора сообщения
     #raceemoji = ["🐱","🐉","🍀","🧙"] наработка на будущее
-    race = ["Зверолюди", "Драконы", "Дриады", "Люди"]
-    racestatus = ["Атакует зверолюдей", "Атакует драконов", "Атакует дриад", "Атакует людей", "Защищает свою фракцию"] 
-    raceattak = ["neko_atack", "dragons_atack", "driadas_atack", "people_atack"]
+    race = ["Зверолюди", "Драконы", "Дриады", "Люди"] #для индекса
+    racestatus = ["Атакует зверолюдей", "Атакует драконов", "Атакует дриад", "Атакует людей", "Защищает свою фракцию"] #для индекса
+    raceattak = ["neko_atack", "dragons_atack", "driadas_atack", "people_atack"] #для индекса
+    print(f"{datetime.now()} {member} вызвал меню gobattle") #ПРИНТЫaa
 
-    for i in record:
-        member_race = i[1]
-        attack = i[6]
-        deffens = i[7]
-        max_hp = i[4]
-        hp = i[3]
-        figh = i[2]
-    try:
-        if int(figh) == 0:
-            print(f"{datetime.now()} {member} прошел try")
-    except ValueError:
-        await member.send("Вы уже участвуйте в битве")
-        return
+    async def mibattle(select_race, member): #просчет кнопки, которая ниже
+        member_id = member.id #получаем id
+        cur.execute(f"SELECT id, race, figh, hp, max_hp, level, attack, deffens FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
+        record = cur.fetchall()
+        for i in record: #получаем данные из рекорда
+            member_race = i[1]
+            attack = i[6]
+            deffens = i[7]
+            max_hp = i[4]
+            hp = i[3]
+            figh = i[2]
+        try: #проверка, что чел не в битве
+            if int(figh) == 0:
+                print(f"{datetime.now()} {member} прошел try")
+        except ValueError:
+            await member.send("Вы уже участвуйте в битве")
+            return
 
-    if record[0][3] == 0:
-        await member.send("Вы не можете сражаться с нулевым здоровьем")
-        return
-
-    if Direction == record[0][1]:
-        power = (attack*deffens/2)/2/max_hp*hp
-        cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
-        cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
+        if record[0][3] == 0: #проверка на HP
+            member.send("Вы не можете сражаться с нулевым здоровьем")
+            return
+        if select_race == record[0][1]: #если защита расы, то записываем
+            power = (attack*deffens/2)/2/max_hp*hp
+            cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
+            cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
+            con.commit()
+            print(f"{datetime.now()} {member} {racestatus[4]} {record[0][1]}") #ПРИНТЫ
+            await member.send(f"Вы встали на защиту вашей расы")
+            return
+        power = (deffens*attack/2)/2/max_hp*hp #если человек идет против другой расы - считаем это ниже
+        member_race_number = race.index(member_race)
+        status_attack = race.index(select_race)
+        cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{select_race}'")
+        cur.execute(f"UPDATE char SET figh = '{racestatus[status_attack]}' WHERE user_id = {record[0][0]}")
         con.commit()
-        print(f"{datetime.now()} {member} {racestatus[4]}") #ПРИНТЫ
-        await member.send(f"Вы встали на защиту вашей расы")
-        return
+        print(f"{datetime.now()} {member} {racestatus[status_attack]}") #принты
+        await member.send(f"Вы записались на битву. Стаутус: {racestatus[status_attack]}")
 
-    if Direction not in race:
-        await member.send("Принимается только: Зверолюди; Драконы; Дриады; Люди; Дефф")
-        return
 
-    power = (deffens*attack/2)/2/max_hp*hp
-    member_race_number = race.index(member_race)
-    status_attack = race.index(Direction)
-    cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{Direction}'")
-    cur.execute(f"UPDATE char SET figh = '{racestatus[status_attack]}' WHERE user_id = {record[0][0]}")
-    con.commit()
-    print(f"{datetime.now()} {member} {racestatus[status_attack]}")
 
-    await member.send(f"Вы записались на битву. Стаутус: {racestatus[status_attack]}")
+    await ctx.send( #выводим бесконечную кнопку
+    "Выберите расу для защиты/атаки!",
+        components = [
+            Button(label = 'Дриады!', emoji = '🍀'),
+            Button(label = 'Зверолюди!', emoji = '🐱'),
+            Button(label = 'Драконы!', emoji = '🐉'),
+            Button(label = 'Люди!', emoji = '🧙')
+        ]
+    )
+
+    while True: 
+        interaction = await bot.wait_for("button_click")
+        if interaction.component.label == 'Дриады!':
+            await mibattle("Дриады", interaction.author)
+            await interaction.edit_origin()
+        elif interaction.component.label == 'Люди!':
+            await mibattle("Люди", interaction.author)
+            await interaction.edit_origin()
+        elif interaction.component.label == 'Зверолюди!':
+            await mibattle("Зверолюди", interaction.author)
+            await interaction.edit_origin()
+        elif interaction.component.label == 'Драконы!':
+            await mibattle("Драконы", interaction.author)
+            await interaction.edit_origin()
+        else:
+            await interaction.respond(content="Произошла ошибка, обратитесь к администрации!")
+
+
+
+
+
+
+
+
 
 
 
