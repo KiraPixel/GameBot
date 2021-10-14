@@ -441,14 +441,14 @@ async def gb(ctx): #Битвы
             member.send("Вы не можете сражаться с нулевым здоровьем")
             return
         if select_race == record[0][1]: #если защита расы, то записываем
-            power = (attack*deffens/2)/2/max_hp*hp
+            power = (attack+deffens/2)/2/max_hp*hp
             cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
             cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
             con.commit()
             print(f"{datetime.now()} {member} {racestatus[4]} {record[0][1]}") #ПРИНТЫ
             await member.send(f"Вы встали на защиту вашей расы")
             return
-        power = (deffens*attack/2)/2/max_hp*hp #если человек идет против другой расы - считаем это ниже
+        power = (deffens+attack/2)/2/max_hp*hp #если человек идет против другой расы - считаем это ниже
         member_race_number = race.index(member_race)
         status_attack = race.index(select_race)
         cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{select_race}'")
