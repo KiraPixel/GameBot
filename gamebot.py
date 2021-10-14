@@ -146,7 +146,8 @@ async def help(ctx):
     embed.add_field(name="help", value="Вызывает эту подсказку")
     embed.add_field(name="profile", value="Посмотреть Ваш профиль ")
     embed.add_field(name="inventory", value="Посмотреть Ваш инвентарь")
-    embed.add_field(name="gb (Раса)", value="Вы отправитесь на битву против написанной расы \nЕсли вы хотите встать на защиту Вашей расы - напиште её название")
+    embed.add_field(name="gb", value="Вызвает кнопки, для выбора направления боя")
+    embed.add_field(name="pingb (раса)", value="Призывает на бой против написанной расы")
     embed.add_field(name="equip (id предмета)", value="Позволяет надеть предмет/одежду")
     embed.add_field(name="job", value="Вы оправитесь на прогулку и получите опыт и немного денег")
     embed.add_field(name="walk", value="Вы оправитесь на поиски подработки и получите денеги и немного опыта")
@@ -390,74 +391,11 @@ async def battle():
 
 
 
-
-
-
-@bot.event
-async def on_ready():
-    print(f"{datetime.now()} Bot сonnected to Discord")
-
-    scheduler = AsyncIOScheduler()
-    scheduler.add_job(battle, trigger='cron', hour='12', minute='00')
-    scheduler.add_job(battle, trigger='cron', hour='16', minute='00')
-    scheduler.add_job(battle, trigger='cron', hour='20', minute='00')
-    scheduler.start()
-
-    DiscordComponents(bot)
-
-
-
-
-
 @bot.command()
 # @has_permissions(administrator = True)
 async def gb(ctx): #Битвы
     member = ctx.message.author #получаем автора сообщения
-    #raceemoji = ["🐱","🐉","🍀","🧙"] наработка на будущее
-    race = ["Зверолюди", "Драконы", "Дриады", "Люди"] #для индекса
-    racestatus = ["Атакует зверолюдей", "Атакует драконов", "Атакует дриад", "Атакует людей", "Защищает свою фракцию"] #для индекса
-    raceattak = ["neko_atack", "dragons_atack", "driadas_atack", "people_atack"] #для индекса
     print(f"{datetime.now()} {member} вызвал меню gobattle") #ПРИНТЫaa
-
-    async def mibattle(select_race, member): #просчет кнопки, которая ниже
-        member_id = member.id #получаем id
-        cur.execute(f"SELECT id, race, figh, hp, max_hp, level, attack, deffens FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
-        record = cur.fetchall()
-        for i in record: #получаем данные из рекорда
-            member_race = i[1]
-            attack = i[6]
-            deffens = i[7]
-            max_hp = i[4]
-            hp = i[3]
-            figh = i[2]
-        try: #проверка, что чел не в битве
-            if int(figh) == 0:
-                print(f"{datetime.now()} {member} прошел try")
-        except ValueError:
-            await member.send("Вы уже участвуйте в битве")
-            return
-
-        if record[0][3] == 0: #проверка на HP
-            member.send("Вы не можете сражаться с нулевым здоровьем")
-            return
-        if select_race == record[0][1]: #если защита расы, то записываем
-            power = (attack*deffens/2)/2/max_hp*hp
-            cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
-            cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
-            con.commit()
-            print(f"{datetime.now()} {member} {racestatus[4]} {record[0][1]}") #ПРИНТЫ
-            await member.send(f"Вы встали на защиту вашей расы")
-            return
-        power = (deffens*attack/2)/2/max_hp*hp #если человек идет против другой расы - считаем это ниже
-        member_race_number = race.index(member_race)
-        status_attack = race.index(select_race)
-        cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{select_race}'")
-        cur.execute(f"UPDATE char SET figh = '{racestatus[status_attack]}' WHERE user_id = {record[0][0]}")
-        con.commit()
-        print(f"{datetime.now()} {member} {racestatus[status_attack]}") #принты
-        await member.send(f"Вы записались на битву. Стаутус: {racestatus[status_attack]}")
-
-
 
     await ctx.send( #выводим бесконечную кнопку
     "Выберите расу для защиты/атаки!",
@@ -469,39 +407,33 @@ async def gb(ctx): #Битвы
         ]
     )
 
-    while True: 
-        interaction = await bot.wait_for("button_click")
-        if interaction.component.label == 'Дриады!':
-            await mibattle("Дриады", interaction.author)
-            await interaction.edit_origin()
-        elif interaction.component.label == 'Люди!':
-            await mibattle("Люди", interaction.author)
-            await interaction.edit_origin()
-        elif interaction.component.label == 'Зверолюди!':
-            await mibattle("Зверолюди", interaction.author)
-            await interaction.edit_origin()
-        elif interaction.component.label == 'Драконы!':
-            await mibattle("Драконы", interaction.author)
-            await interaction.edit_origin()
-        else:
-            await interaction.respond(content="Произошла ошибка, обратитесь к администрации!")
+@bot.command()
+# @has_permissions(administrator = True)
+async def pingb(ctx, race: str): #Битвы
+    member = ctx.message.author #получаем автора сообщения
+    print(f"{datetime.now()} {member} вызвал меню pin gobattle") #ПРИНТЫaa
+    if race == "Зверолюди":
+        label = 'Зверолюди!'
+        emoji = '🐱'
+    elif race == "Дриады":
+        label = 'Дриады!'
+        emoji = '🍀'
+    elif race == "Драконы":
+        label = 'Драконы!'
+        emoji = '🐉'
+    elif race == "Люди":
+        label = 'Люди!'
+        emoji = '🧙'
+    else:
+        await ctx.send("Неверно указана раса! Принимается только: Зверолюди, Дриады, Драконы, Люди")
+        return
 
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-
+    await ctx.send(
+    f"Вас призвали по направлению на {label} Нажмите на кнопку ниже!",
+        components = [
+            Button(label = label, emoji = emoji)
+        ]
+    )
 
 
 
@@ -660,19 +592,16 @@ async def walk(ctx):
 async def giveitem(ctx, opponent:discord.Member, item_id: str):
     print(f"{datetime.now()} {ctx.message.author} выдает предмет {item_id} {opponent}") #ПРИНТЫ
     opponent = opponent.id
-    with sq.connect('DataBase.db') as con:
-        cur = con.cursor()
-        cur.execute(f"SELECT item_name, item_type, item_price, item_attack, item_deffens, item_luck, item_hp, item_lvl FROM item WHERE item_id = '{item_id}'") #получаем инфу о предмете
-        record = cur.fetchall()
-        cur.execute(f"SELECT * FROM users WHERE discord_id = {opponent}") #пробиваем оппенента 
-        record2 = cur.fetchall()
-        if len(record) == 0 or len(record2) == 0:    #проверяем наши запросы и выдаем ошибку
-            await ctx.send(f"{'Участник' if len(record2) == 0 else 'Item'} не найден")
-            con.commit()
-            return
-        print(record[0][1:])
-        cur.execute(f"INSERT INTO inv (inv_owner_id, inv_name, inv_type, inv_price, inv_attack, inv_deffens, inv_luck, inv_hp, inv_lvl) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",[record2[0][0], *record[0][0:]]) #записываем в базу всю инфу
-        con.commit()
+    cur.execute(f"SELECT item_name, item_type, item_price, item_attack, item_deffens, item_luck, item_hp, item_lvl FROM item WHERE item_id = '{item_id}'") #получаем инфу о предмете
+    record = cur.fetchall()
+    cur.execute(f"SELECT * FROM users WHERE discord_id = {opponent}") #пробиваем оппенента 
+    record2 = cur.fetchall()
+    if len(record) == 0 or len(record2) == 0:    #проверяем наши запросы и выдаем ошибку
+        await ctx.send(f"{'Участник' if len(record2) == 0 else 'Item'} не найден")
+        return
+    print(record[0][1:])
+    cur.execute(f"INSERT INTO inv (inv_owner_id, inv_name, inv_type, inv_price, inv_attack, inv_deffens, inv_luck, inv_hp, inv_lvl) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",[record2[0][0], *record[0][0:]]) #записываем в базу всю инфу
+    con.commit()
     await ctx.send(f"Предмет выдан")
     print("Предмет выдан")
 
@@ -713,50 +642,46 @@ async def createguild(ctx, groupname: str):
     owner = ctx.message.author.id #получаю id отправителя сообщени
     print(f"{datetime.now()} {ctx.message.author} начал регистрацию своей гильдии с названием {groupname}") #Серьезно? Это тоже?
     #Дальше идет код дата базы, я не думаю, что тут что-то нужно пояснять
-    with sq.connect('DataBase.db') as con:
-        cur = con.cursor()
-        cur.execute(f"SELECT * FROM users discord_id WHERE discord_id = {owner} AND groups = 0")
+    cur.execute(f"SELECT * FROM users discord_id WHERE discord_id = {owner} AND groups = 0")
+    record = cur.fetchall()
+    for i in record:
+        race = i[5]
+    con.commit()
+    if len(record) == 0:
+        await ctx.send("Вы уже имеете или состоите в группе")
+        print(f"{datetime.now()} {ctx.message.author} не смог зарегать свой отряд. Т-к уже состоит в другом.")
+    else:
+        guild = ctx.guild 
+        await guild.create_role(name=groupname) #Создаем роль
+        new_group = get(ctx.guild.roles, name=groupname) #получаем объект роли
+        await ctx.message.author.add_roles(new_group) #добавялем чела в роль
+
+        #пермишионы для нового чата
+        overwrites = {
+            guild.default_role: discord.PermissionOverwrite(read_messages=False),
+            new_group: discord.PermissionOverwrite(read_messages=True, send_messages = True)
+        }
+
+        #Создаем канал в специально категории
+        category_channel = bot.get_channel(891362588221403206)
+        await category_channel.create_text_channel(name=groupname, overwrites=overwrites)
+        channel = discord.utils.get(ctx.guild.channels, name =groupname.lower())
+        print(f"Был создан канал {channel}")
+        channel = channel.id
+
+        #Добавляем записи в группы
+        cur.execute(f"INSERT INTO groups (owner_id, group_date_registrator, group_name, group_race, group_chat_id) VALUES({owner}, '{date_registration}', '{groupname}', '{race}', {channel})")
+        cur.execute(f"SELECT * FROM groups WHERE group_name = '{groupname}'")
         record = cur.fetchall()
         for i in record:
-            race = i[5]
+            id_group = i[0]
+        cur.execute(f"UPDATE users SET groups = {id_group} WHERE discord_id = {owner}")
+        record = cur.fetchall()                    
         con.commit()
-        if len(record) == 0:
-            await ctx.send("Вы уже имеете или состоите в группе")
-            print(f"{datetime.now()} {ctx.message.author} не смог зарегать свой отряд. Т-к уже состоит в другом.")
-        else:
-            guild = ctx.guild 
-            await guild.create_role(name=groupname) #Создаем роль
-            new_group = get(ctx.guild.roles, name=groupname) #получаем объект роли
-            await ctx.message.author.add_roles(new_group) #добавялем чела в роль
 
-            #пермишионы для нового чата
-            overwrites = {
-                guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                new_group: discord.PermissionOverwrite(read_messages=True, send_messages = True)
-            }
-
-            #Создаем канал в специально категории
-            category_channel = bot.get_channel(891362588221403206)
-            await category_channel.create_text_channel(name=groupname, overwrites=overwrites)
-            channel = discord.utils.get(ctx.guild.channels, name =groupname.lower())
-            print(f"Был создан канал {channel}")
-            channel = channel.id
-
-            #Добавляем записи в группы
-            with sq.connect('DataBase.db') as con:
-                cur = con.cursor()
-                cur.execute(f"INSERT INTO groups (owner_id, group_date_registrator, group_name, group_race, group_chat_id) VALUES({owner}, '{date_registration}', '{groupname}', '{race}', {channel})")
-                cur.execute(f"SELECT * FROM groups WHERE group_name = '{groupname}'")
-                record = cur.fetchall()
-                for i in record:
-                    id_group = i[0]
-                cur.execute(f"UPDATE users SET groups = {id_group} WHERE discord_id = {owner}")
-                record = cur.fetchall()                    
-                con.commit()
-
-            #ИЗИ БЛЯТЬ, ГОТОВО
-            await ctx.send("Успешно")
-            print(f"{datetime.now()} {ctx.message.author} зарегистрировал отряд {groupname}")
+        #ИЗИ БЛЯТЬ, ГОТОВО
+        await ctx.send("Успешно")
+        print(f"{datetime.now()} {ctx.message.author} зарегистрировал отряд {groupname}")
 
 
 
@@ -769,48 +694,44 @@ async def inviteguild(ctx, opponent: discord.Member):
     member = ctx.message.author.id #получаю id отправителя сообщени
     print(f"{datetime.now()} {member} пытается пригласить {opponent} в гильдию")
     opponent = opponent.id #получаем id оппонента
-    with sq.connect('DataBase.db') as con:
-        cur = con.cursor()
-        cur.execute(f"SELECT * FROM groups WHERE owner_id = {member}") #пробиваем гильдию
-        record = cur.fetchall()
-        if len(record) == 0:    #Если нету записей, соси бобру
-            await ctx.send(f"Вы не глава гильдии")
-            con.commit()
-            return
-        for i in record: #Если записи есть - сохраняем
-            id_group = i[0]
-            owner_id = i[1]
-            group_name = i[3]
-            group_race = i[4]
+    cur.execute(f"SELECT * FROM groups WHERE owner_id = {member}") #пробиваем гильдию
+    record = cur.fetchall()
+    if len(record) == 0:    #Если нету записей, соси бобру
+        await ctx.send(f"Вы не глава гильдии")
+        return
+    for i in record: #Если записи есть - сохраняем
+        id_group = i[0]
+        owner_id = i[1]
+        group_name = i[3]
+        group_race = i[4]
 
-        cur.execute(f"SELECT * FROM users WHERE discord_id = {opponent}") #пробиваем оппенента 
-        record = cur.fetchall()
-        if len(record) == 0:    #если чела нету на серерве - пусть сосет бобру
-            await ctx.send(f"Участник не найден")
-            con.commit()
-            return
-        for i in record: #а если есть, то - сохраняем
-            name = i[3]
-            race = i[5]
-            groups = i[4]     
+    cur.execute(f"SELECT * FROM users WHERE discord_id = {opponent}") #пробиваем оппенента 
+    record = cur.fetchall()
+    if len(record) == 0:    #если чела нету на серерве - пусть сосет бобру
+        await ctx.send(f"Участник не найден")
+        return
+    for i in record: #а если есть, то - сохраняем
+        name = i[3]
+        race = i[5]
+        groups = i[4]     
 
-        if group_race != race: #проверка, что челы одной расы
-            await ctx.send(f"Выбранный участник  - другой расы, {race}.")
-            return
-        if groups == id_group: #проверка, что чел уже не состоит в этой гильдии
-            await ctx.send(f"Выбранный участник  - уже состоит в вашей гильдии.")
-            return    
-        elif groups != 0: #проверка, что чел не состоит в гильдии
-            await ctx.send(f"Выбранный участник  - уже состоит в другой гильдии.")
-            return
+    if group_race != race: #проверка, что челы одной расы
+        await ctx.send(f"Выбранный участник  - другой расы, {race}.")
+        return
+    if groups == id_group: #проверка, что чел уже не состоит в этой гильдии
+        await ctx.send(f"Выбранный участник  - уже состоит в вашей гильдии.")
+        return    
+    elif groups != 0: #проверка, что чел не состоит в гильдии
+        await ctx.send(f"Выбранный участник  - уже состоит в другой гильдии.")
+        return
 
-        cur.execute(f"UPDATE users SET groups = {id_group} WHERE discord_id = {opponent}") #меняем id группы в дата базе
-        guildrole = get(ctx.guild.roles, name=group_name) #получаем роль на сервере - через название
-        member = ctx.guild.get_member(opponent) #получаем объект оппонента через id
-        await member.add_roles(guildrole) #добавялем чела в роль
-        await ctx.send(f"Выбранный участник  - был добалвен в гильдию")
-        print(f"{datetime.now()} {member} был добавлен в гильдию {guildrole}")
-        con.commit() #закрываем базу
+    cur.execute(f"UPDATE users SET groups = {id_group} WHERE discord_id = {opponent}") #меняем id группы в дата базе
+    guildrole = get(ctx.guild.roles, name=group_name) #получаем роль на сервере - через название
+    member = ctx.guild.get_member(opponent) #получаем объект оппонента через id
+    await member.add_roles(guildrole) #добавялем чела в роль
+    await ctx.send(f"Выбранный участник  - был добалвен в гильдию")
+    print(f"{datetime.now()} {member} был добавлен в гильдию {guildrole}")
+    con.commit() #закрываем базу
 
 
 
@@ -863,11 +784,8 @@ async def on_message(message):
             #закончили
 
             #проверяем, что чел новенький и его запаха не осталось на футболке нашей дата базы
-            with sq.connect('DataBase.db') as con:  
-                cur = con.cursor()
-                cur.execute(f"SELECT * FROM users discord_id WHERE discord_id = {searchuser}") 
-                record = cur.fetchall()
-                con.commit()
+            cur.execute(f"SELECT * FROM users discord_id WHERE discord_id = {searchuser}") 
+            record = cur.fetchall()
             if len(record) != 0:
                 print(f"{au_user} попытался зарегистрироваться")
                 if get(member.roles, name="Игрок"):
@@ -955,11 +873,9 @@ async def on_message(message):
                     pass
 
             #Усе, чел дал всю хуйню, теперь можно и в базу записать
-            with sq.connect('DataBase.db') as con:
-                cur = con.cursor()
-                cur.execute(f"INSERT INTO users (discord_id, date_registrator, name, race) VALUES({au_user.id}, '{date_registr}', '{nick}', '{role}')")
-                cur.execute(f"INSERT INTO char(user_id) SELECT id FROM users WHERE discord_id = {searchuser}")
-                con.commit()
+            cur.execute(f"INSERT INTO users (discord_id, date_registrator, name, race) VALUES({au_user.id}, '{date_registr}', '{nick}', '{role}')")
+            cur.execute(f"INSERT INTO char(user_id) SELECT id FROM users WHERE discord_id = {searchuser}")
+            con.commit()
 
             #Принты!
             await au_user.send(f"Регистрация успешно закончена\nВы можете получить список команд, прописав {command_prefix}help")
@@ -1023,6 +939,77 @@ async def top(ctx):
         colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     )
     await ctx.send(embed=embed2)
+
+@bot.event
+async def on_ready():
+    print(f"{datetime.now()} Bot сonnected to Discord")
+
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(battle, trigger='cron', hour='12', minute='00')
+    scheduler.add_job(battle, trigger='cron', hour='16', minute='00')
+    scheduler.add_job(battle, trigger='cron', hour='20', minute='00')
+    scheduler.start()
+
+    DiscordComponents(bot)
+
+    #Кнопка битвы расс
+    race = ["Зверолюди", "Драконы", "Дриады", "Люди"] #для индекса
+    racestatus = ["Атакует зверолюдей", "Атакует драконов", "Атакует дриад", "Атакует людей", "Защищает свою фракцию"] #для индекса
+    raceattak = ["neko_atack", "dragons_atack", "driadas_atack", "people_atack"] #для индекса
+    async def mibattle(select_race, member): #просчет кнопки, которая ниже
+        member_id = member.id #получаем id
+        cur.execute(f"SELECT id, race, figh, hp, max_hp, level, attack, deffens FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
+        record = cur.fetchall()
+        for i in record: #получаем данные из рекорда
+            member_race = i[1]
+            attack = i[6]
+            deffens = i[7]
+            max_hp = i[4]
+            hp = i[3]
+            figh = i[2]
+        try: #проверка, что чел не в битве
+            if int(figh) == 0:
+                print(f"{datetime.now()} {member} прошел try")
+        except ValueError:
+            await member.send("Вы уже участвуйте в битве")
+            return
+
+        if record[0][3] == 0: #проверка на HP
+            member.send("Вы не можете сражаться с нулевым здоровьем")
+            return
+        if select_race == record[0][1]: #если защита расы, то записываем
+            power = (attack*deffens/2)/2/max_hp*hp
+            cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
+            cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
+            con.commit()
+            print(f"{datetime.now()} {member} {racestatus[4]} {record[0][1]}") #ПРИНТЫ
+            await member.send(f"Вы встали на защиту вашей расы")
+            return
+        power = (deffens*attack/2)/2/max_hp*hp #если человек идет против другой расы - считаем это ниже
+        member_race_number = race.index(member_race)
+        status_attack = race.index(select_race)
+        cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{select_race}'")
+        cur.execute(f"UPDATE char SET figh = '{racestatus[status_attack]}' WHERE user_id = {record[0][0]}")
+        con.commit()
+        print(f"{datetime.now()} {member} {racestatus[status_attack]}") #принты
+        await member.send(f"Вы записались на битву. Статус: {racestatus[status_attack]}")
+    while True: 
+        interaction = await bot.wait_for("button_click")
+        if interaction.component.label == 'Дриады!':
+            await mibattle("Дриады", interaction.author)
+            await interaction.edit_origin()
+        elif interaction.component.label == 'Люди!':
+            await mibattle("Люди", interaction.author)
+            await interaction.edit_origin()
+        elif interaction.component.label == 'Зверолюди!':
+            await mibattle("Зверолюди", interaction.author)
+            await interaction.edit_origin()
+        elif interaction.component.label == 'Драконы!':
+            await mibattle("Драконы", interaction.author)
+            await interaction.edit_origin()
+        else:
+            await interaction.respond(content="Произошла ошибка, обратитесь к администрации!")
+
 
 print (f"{datetime.now()} BOT START")
 bot.run(settings['token']) #берем токен из конфига и стартуем
