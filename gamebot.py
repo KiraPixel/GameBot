@@ -103,38 +103,8 @@ with sq.connect('DataBase.db') as con:
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix = settings['prefix'], intents = intents) #прогружаем префикс
-#@commands.has_permissions( administrator = True )
 
 @bot.remove_command('help') #УДАЛЯЕМ СРАННЫЙ HELP
-
-
-
-# @bot.command() Заготовка
-# async def menu(ctx):
-#     await ctx.send(
-#         "Это кнопка!",
-#         components = [
-#             Button(label = 'Дриады!', emoji = '🍀'),
-#             Button(label = 'Зверолюди!', emoji = '🐱'),
-#             Button(label = 'Драконы!', emoji = '🐉'),
-#             Button(label = 'Люди!', emoji = '🧙')
-#         ]
-#     )
-#     while True:
-#         interaction = await bot.wait_for("button_click")
-#         if interaction.component.label == 'Дриады!':
-#             await interaction.respond(content = 'Вы выбрали дриад!')
-#         elif interaction.component.label == 'Люди!':
-#             await interaction.respond(content = 'Вы выбрали людей.')
-#         elif interaction.component.label == 'Зверолюди!':
-#             await interaction.respond(content = 'Вы выбрали зверолюдей.')
-#         elif interaction.component.label == 'Драконы!':
-#             await interaction.respond(content = 'Вы выбрали драконов.')
-#         print(interaction)
-#         print("Нажали на кнопку")
-#         await interaction.respond(content="Ты нажал на кнопку!")
-
-
 
 @bot.command()
 async def help(ctx):
@@ -172,16 +142,10 @@ def neeewlvl(member_id):
         cur.execute(f"UPDATE char SET level = {record2[0][0]} WHERE user_id = {record[0][0]}") #выдаем новый лвл
         con.commit()
 
-
 @bot.command() #Тестовая команда
 async def ml(ctx):
     member_id = ctx.message.author.id
     neeewlvl(member_id)
-
-
-
-
-
 
 @bot.command()
 #@has_permissions(administrator = True)
@@ -270,8 +234,6 @@ async def aprofile(ctx, member_id: str):
     embed.add_field(name="\nСлоты:", value=value2)
     await ctx.author.send(embed=embed)
 
-
-
 @bot.command()
 async def profile(ctx):
     print(f"{datetime.now()} {ctx.message.author} смотрит свой профиль") #ПРИНТЫ
@@ -311,11 +273,6 @@ async def profile(ctx):
     embed.add_field(name="Инфо:", value=value1)
     embed.add_field(name="\nСлоты:", value=value2)
     await ctx.channel.send(embed=embed)
-
-
-
-
-
 
 async def battle():
     with sq.connect('DataBase.db') as con:
@@ -389,8 +346,6 @@ async def battle():
         cur.execute(f"UPDATE char SET figh = '0'") #обнуляем у всех статусы битв
         con.commit() #Окончание работы с бд
 
-
-
 @bot.command()
 # @has_permissions(administrator = True)
 async def gb(ctx): #Битвы
@@ -435,51 +390,78 @@ async def pingb(ctx, race: str): #Битвы
         ]
     )
 
-
-
-@bot.command()
-# @has_permissions(administrator = True)
-async def job(ctx):
-    print(f"{datetime.now()} {ctx.message.author} решил поработать") #Серьезно? Это тоже?
-    member_id = ctx.message.author.id
-    member = ctx.message.author
+async def joborwalk(member, status, message):
+    print(f"{datetime.now()} {member} решил {status}") #Серьезно? Это тоже?
+    member_id = member.id
     cur.execute(f"SELECT user_id, level, activity FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})") #Получаем user_id, level, exp
     record = cur.fetchall()
 
     if record[0][2] != '0': #проверка, что чел не занят
-        await member.send(f"Вы сейчас не можете гулять. Ваше текущее занятие: {record[0][2]}")
-        print(f"{datetime.now()} {ctx.message.author} не может сейчас работать, он: {record[0][2]}")
+        await member.send(f"Вы сейчас заняты. Ваше текущее занятие: {record[0][2]}")
+        print(f"{datetime.now()} {member} занимается чем-то другим, {record[0][2]}")
         return
     else:
-        cur.execute(f"UPDATE char SET activity = 'работает' WHERE user_id = {record[0][0]}")
+        await member.send(message)
+        cur.execute(f"UPDATE char SET activity = '{status}' WHERE user_id = {record[0][0]}")
         con.commit()
 
     if record[0][1] <= 14:  #Проверка на лвл
-        max_coin = 3
+        x = 3
     elif record[0][1] >= 15 and record[0][1] < 26:
-        max_coin = 10
+        x = 10
     elif record[0][1] >= 26 and record[0][1] < 31:
-        max_coin = 20
+        x = 20
     elif record[0][1] >= 31 and record[0][1] < 35:
-        max_coin = 30
+        x = 30
     elif record[0][1] >= 35 and record[0][1] < 40:
-        max_coin = 35
+        x = 35
     elif record[0][1] >= 40 and record[0][1] < 45:
-        max_coin = 40
+        x = 40
     elif record[0][1] <= 45:
-        max_coin = 50
+        x = 50
     else:
-        max_coin = 0 #Если лвл какой-то неправильный, даем ноль денег
+        x = 0 #Если лвл какой-то неправильный, даем ноль денег
 
-    if max_coin == 3: #По сути с 0 до 14 лвл будет давать 1 coin
-        xp = 1 
-    elif max_coin == 0:
-        xp = 0 #Если лвл какой-то неправильный, даем ноль опыта
-    else: #если чел больше 14 лвл, рандомно даем опыта
-        max_coin = max_xp + random.randint( -5, 2)
-        xp = max_xp + random.randint( -5, -3)
+    if x == 3: #По сути с 0 до 14 лвл будет давать 1 coin
+        z = 1 
+    elif x == 0:
+        z = 0 #Если лвл какой-то неправильный, даем ноль опыта/денег
+    else: #если чел больше 14 лвл, рандомно даем опыта/денег
+        z = x + random.randint( -5, -3)
+        x = x + random.randint( -5, 2)
 
-    walk_list = [
+    async def jobandwalk():
+        if status == "работает":
+            cur.execute(f"UPDATE char SET exp = exp + {z}, coins = coins + {x}, activity = 0 WHERE user_id = {record[0][0]}")
+            con.commit() 
+            await member.send(f"За работу, Вам начисленно {z} опыта и {x} монет !",
+            components = [
+                Button(label = 'Работать еще!', emoji = '⚒️')
+                ]
+        )
+        else:
+            cur.execute(f"UPDATE char SET exp = exp + {x}, coins = coins + {z}, activity = 0 WHERE user_id = {record[0][0]}")
+            con.commit() 
+            await member.send(f"За прогулку, вам начисленно {z} опыта и {x} монет !",
+            components = [
+                Button(label = 'Гулять еще!', emoji = '🚶‍♂️')
+                ]
+        )
+            
+        neeewlvl(member_id)
+        scheduler.shutdown()
+
+    scheduler = AsyncIOScheduler()
+    date_now = datetime.now()
+    five_minut = date_now + timedelta(seconds=60*1)
+    scheduler.add_job(jobandwalk, trigger='cron', minute=five_minut.minute)
+    scheduler.start()
+
+@bot.command()
+async def job(ctx):
+    status = "работает"
+    member = ctx.message.author
+    job_list = [
         "Надо немного поработать",
         "Я каменщик, работаю три дня и еще ХОЧУ!",
         'Как же иногда хочется стать безработным и реинкарнировать и написать свою историю "о приключениях в другом мире"\nНо сегодня - надо работать',
@@ -493,71 +475,14 @@ async def job(ctx):
         "Давай поработаем...",
         "Опять работа?",
     ]
-
-    scheduler = AsyncIOScheduler()
-
-    async def job_time():
-        cur.execute(f"UPDATE char SET exp = exp + {xp}, coins = coins + {max_coin}, activity = 0 WHERE user_id = {record[0][0]}")
-        con.commit() 
-        await member.send(f"За работу, Вам начисленно {xp} опыта и {max_coin} монет !")
-        neeewlvl(member_id)
-        scheduler.shutdown()
-
-
-    date_now = datetime.now()
-    five_minut = date_now + timedelta(seconds=60*5)
-    scheduler.add_job(job_time, trigger='cron', minute=five_minut.minute)
-    scheduler.start()
-    await member.send(random.choice(walk_list))
-
-
-
-
-
-
+    message = random.choice(job_list)
+    await joborwalk(member, status, message)
 
 @bot.command()
 # @has_permissions(administrator = True)
 async def walk(ctx):
-    print(f"{datetime.now()} {ctx.message.author} решил пойти погулять") #Серьезно? Это тоже?
-    member_id = ctx.message.author.id
+    status = "гуляет"
     member = ctx.message.author
-    cur.execute(f"SELECT user_id, level, activity FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})") #Получаем user_id, level, exp
-    record = cur.fetchall()
-
-    if record[0][2] != '0': #проверка, что чел не занят
-        await member.send(f"Вы сейчас не можете гулять. Ваше текущее занятие: {record[0][2]}")
-        print(f"{datetime.now()} {ctx.message.author} не может сейчас гулять, он: {record[0][2]}")
-        return
-    else:
-        cur.execute(f"UPDATE char SET activity = 'гуляет' WHERE user_id = {record[0][0]}")
-        con.commit()
-
-    if record[0][1] <= 14:  #Проверка на лвл
-        max_xp = 3
-    elif record[0][1] >= 15 and record[0][1] < 26:
-        max_xp = 10
-    elif record[0][1] >= 26 and record[0][1] < 31:
-        max_xp = 20
-    elif record[0][1] >= 31 and record[0][1] < 35:
-        max_xp = 30
-    elif record[0][1] >= 35 and record[0][1] < 40:
-        max_xp = 35
-    elif record[0][1] >= 40 and record[0][1] < 45:
-        max_xp = 40
-    elif record[0][1] <= 45:
-        max_xp = 50
-    else:
-        max_xp = 0 #Если лвл какой-то неправильный, даем ноль опыта
-
-    if max_xp == 3: #По сути с 0 до 14 лвл будет давать 1 coin
-        coin = 1 
-    elif max_xp == 0:
-        coin = 0 #Если лвл какой-то неправильный, даем ноль денег
-    else: #если чел больше 14 лвл, рандомно даем денег
-        max_xp = max_xp + random.randint( -5, 2)
-        coin = max_xp + random.randint( -5, -3)
-
     walk_list = [
         "Вы решили немного прогуляться",
         "Вы устали работать и решили немного погулять",
@@ -565,27 +490,8 @@ async def walk(ctx):
         "Пойдем гулять...",
     ]
 
-    scheduler = AsyncIOScheduler()
-
-    async def walk_time():
-        cur.execute(f"UPDATE char SET exp = exp + {max_xp}, coins = coins + {coin}, activity = 0 WHERE user_id = {record[0][0]}")
-        con.commit() 
-        await member.send(f"За прогулку, вам начисленно {max_xp} опыта и {coin} монет !")
-        neeewlvl(member_id)
-        scheduler.shutdown()
-
-
-    date_now = datetime.now()
-    five_minut = date_now + timedelta(seconds=60*5)
-    scheduler.add_job(walk_time, trigger='cron', minute=five_minut.minute)
-    scheduler.start()
-    await member.send(random.choice(walk_list))
-
-
-
-
-
-
+    message = random.choice(walk_list)
+    await joborwalk(member, status, message)
 
 @bot.command()
 @has_permissions(administrator = True)
@@ -604,11 +510,6 @@ async def giveitem(ctx, opponent:discord.Member, item_id: str):
     con.commit()
     await ctx.send(f"Предмет выдан")
     print("Предмет выдан")
-
-
-
-
-
 
 @bot.command()
 async def inventory(ctx):
@@ -630,9 +531,6 @@ async def inventory(ctx):
 
     embed.set_footer(text="👁️ - адмниские или закрытые команды")
     await ctx.channel.send(embed=embed)
-
-
-
 
 @bot.command()
 @has_permissions(administrator = True)
@@ -683,11 +581,6 @@ async def createguild(ctx, groupname: str):
         await ctx.send("Успешно")
         print(f"{datetime.now()} {ctx.message.author} зарегистрировал отряд {groupname}")
 
-
-
-
-
-
 @bot.command()
 @has_permissions(administrator = True)
 async def inviteguild(ctx, opponent: discord.Member):
@@ -733,20 +626,12 @@ async def inviteguild(ctx, opponent: discord.Member):
     print(f"{datetime.now()} {member} был добавлен в гильдию {guildrole}")
     con.commit() #закрываем базу
 
-
-
-
-
 @bot.command()
 @has_permissions(administrator = True)
 async def say(ctx, *, text):
     message = ctx.message
     await message.delete()
     await ctx.send(text)
-
-
-
-
 
 @bot.command() # отправляет в какой либо чат - сообщение.
 @has_permissions(administrator = True)
@@ -755,12 +640,6 @@ async def sayto(ctx, channel:discord.TextChannel, *, text):
     message = ctx.message
     await message.delete()
     await channel.send(text)
-
-
-
-
-
-
 
 @bot.event
 async def on_message(message):
@@ -890,9 +769,6 @@ async def on_message(message):
 
     await bot.process_commands(message)
 
-
-
-
 @bot.command()
 async def top(ctx):
     print(f"{datetime.now()} {ctx.message.author} смотрит топ") #ПРИНТЫ
@@ -940,6 +816,58 @@ async def top(ctx):
     )
     await ctx.send(embed=embed2)
 
+@bot.command()
+async def twalk(ctx):
+    await ctx.send(
+    "Это кнопка!",
+        components = [
+            Button(label = 'Гулять еще!', emoji = '🍀')
+        ]
+    )
+    print(1)
+
+async def mibattle(select_race, member): #просчет кнопки, которая ниже
+    #Кнопка битвы расс
+    race = ["Зверолюди", "Драконы", "Дриады", "Люди"] #для индекса
+    racestatus = ["Атакует зверолюдей", "Атакует драконов", "Атакует дриад", "Атакует людей", "Защищает свою фракцию"] #для индекса
+    raceattak = ["neko_atack", "dragons_atack", "driadas_atack", "people_atack"] #для индекса
+    member_id = member.id #получаем id
+    cur.execute(f"SELECT id, race, figh, hp, max_hp, level, attack, deffens FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
+    record = cur.fetchall()
+    for i in record: #получаем данные из рекорда
+        member_race = i[1]
+        attack = i[6]
+        deffens = i[7]
+        max_hp = i[4]
+        hp = i[3]
+        figh = i[2]
+    try: #проверка, что чел не в битве
+        if int(figh) == 0:
+            print(f"{datetime.now()} {member} прошел try")
+    except ValueError:
+        await member.send("Вы уже участвуйте в битве")
+        return
+
+    if record[0][3] == 0: #проверка на HP
+        member.send("Вы не можете сражаться с нулевым здоровьем")
+        return
+    if select_race == record[0][1]: #если защита расы, то записываем
+        power = (attack*deffens/2)/2/max_hp*hp
+        cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
+        cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
+        con.commit()
+        print(f"{datetime.now()} {member} {racestatus[4]} {record[0][1]}") #ПРИНТЫ
+        await member.send(f"Вы встали на защиту вашей расы")
+        return
+    power = (deffens*attack/2)/2/max_hp*hp #если человек идет против другой расы - считаем это ниже
+    member_race_number = race.index(member_race)
+    status_attack = race.index(select_race)
+    cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{select_race}'")
+    cur.execute(f"UPDATE char SET figh = '{racestatus[status_attack]}' WHERE user_id = {record[0][0]}")
+    con.commit()
+    print(f"{datetime.now()} {member} {racestatus[status_attack]}") #принты
+    await member.send(f"Вы записались на битву. Статус: {racestatus[status_attack]}")
+
 @bot.event
 async def on_ready():
     print(f"{datetime.now()} Bot сonnected to Discord")
@@ -952,47 +880,6 @@ async def on_ready():
 
     DiscordComponents(bot)
 
-    #Кнопка битвы расс
-    race = ["Зверолюди", "Драконы", "Дриады", "Люди"] #для индекса
-    racestatus = ["Атакует зверолюдей", "Атакует драконов", "Атакует дриад", "Атакует людей", "Защищает свою фракцию"] #для индекса
-    raceattak = ["neko_atack", "dragons_atack", "driadas_atack", "people_atack"] #для индекса
-    async def mibattle(select_race, member): #просчет кнопки, которая ниже
-        member_id = member.id #получаем id
-        cur.execute(f"SELECT id, race, figh, hp, max_hp, level, attack, deffens FROM char, users WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id}) AND discord_id = {member_id}") #Получаем user_id, level, exp
-        record = cur.fetchall()
-        for i in record: #получаем данные из рекорда
-            member_race = i[1]
-            attack = i[6]
-            deffens = i[7]
-            max_hp = i[4]
-            hp = i[3]
-            figh = i[2]
-        try: #проверка, что чел не в битве
-            if int(figh) == 0:
-                print(f"{datetime.now()} {member} прошел try")
-        except ValueError:
-            await member.send("Вы уже участвуйте в битве")
-            return
-
-        if record[0][3] == 0: #проверка на HP
-            member.send("Вы не можете сражаться с нулевым здоровьем")
-            return
-        if select_race == record[0][1]: #если защита расы, то записываем
-            power = (attack*deffens/2)/2/max_hp*hp
-            cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
-            cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
-            con.commit()
-            print(f"{datetime.now()} {member} {racestatus[4]} {record[0][1]}") #ПРИНТЫ
-            await member.send(f"Вы встали на защиту вашей расы")
-            return
-        power = (deffens*attack/2)/2/max_hp*hp #если человек идет против другой расы - считаем это ниже
-        member_race_number = race.index(member_race)
-        status_attack = race.index(select_race)
-        cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{select_race}'")
-        cur.execute(f"UPDATE char SET figh = '{racestatus[status_attack]}' WHERE user_id = {record[0][0]}")
-        con.commit()
-        print(f"{datetime.now()} {member} {racestatus[status_attack]}") #принты
-        await member.send(f"Вы записались на битву. Статус: {racestatus[status_attack]}")
     while True: 
         interaction = await bot.wait_for("button_click")
         if interaction.component.label == 'Дриады!':
@@ -1007,9 +894,14 @@ async def on_ready():
         elif interaction.component.label == 'Драконы!':
             await mibattle("Драконы", interaction.author)
             await interaction.edit_origin()
+        elif interaction.component.label == 'Работать еще!':
+            await joborwalk(interaction.author, "работает", "Хорошо, давай поработаем еще")
+            await interaction.edit_origin()
+        elif interaction.component.label == 'Гулять еще!':
+            await joborwalk(interaction.author, "гуляет", "Хорошо, давай еще немного погуляем")
+            await interaction.edit_origin()
         else:
             await interaction.respond(content="Произошла ошибка, обратитесь к администрации!")
-
 
 print (f"{datetime.now()} BOT START")
 bot.run(settings['token']) #берем токен из конфига и стартуем
