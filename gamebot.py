@@ -453,7 +453,7 @@ async def joborwalk(member, status, message):
 
     scheduler = AsyncIOScheduler()
     date_now = datetime.now()
-    five_minut = date_now + timedelta(seconds=60*1)
+    five_minut = date_now + timedelta(seconds=60*5)
     scheduler.add_job(jobandwalk, trigger='cron', minute=five_minut.minute)
     scheduler.start()
 
@@ -815,16 +815,6 @@ async def top(ctx):
         colour = discord.Colour.from_rgb(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     )
     await ctx.send(embed=embed2)
-
-@bot.command()
-async def twalk(ctx):
-    await ctx.send(
-    "Это кнопка!",
-        components = [
-            Button(label = 'Гулять еще!', emoji = '🍀')
-        ]
-    )
-    print(1)
 
 async def mibattle(select_race, member): #просчет кнопки, которая ниже
     #Кнопка битвы расс
