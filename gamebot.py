@@ -98,7 +98,7 @@ with sq.connect('DataBase.db') as con:
 
         )""")
 
-    cur.execute(f"UPDATE char SET activity = '0', figh = '0'") #Сбрасываем статусы
+    cur.execute(f"UPDATE char SET activity = '0'") #Сбрасываем статусы
     con.commit()
 
 intents = discord.Intents.all()
@@ -130,7 +130,7 @@ async def help(ctx):
     await ctx.channel.send(embed=embed)
 
 
-def neeewlvl(member_id):
+async def neeewlvl(member_id):
     print(f"{datetime.now()} {member_id} просчет опыта") #ПРИНТЫ
     cur = con.cursor()
     cur.execute(f"SELECT user_id, level, exp FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})") #Получаем user_id, level, exp
@@ -145,7 +145,7 @@ def neeewlvl(member_id):
 @bot.command() #Тестовая команда
 async def ml(ctx):
     member_id = ctx.message.author.id
-    neeewlvl(member_id)
+    await neeewlvl(member_id)
 
 @bot.command()
 #@has_permissions(administrator = True)
@@ -448,7 +448,7 @@ async def joborwalk(member, status, message):
                 ]
         )
             
-        neeewlvl(member_id)
+        await neeewlvl(member_id)
         scheduler.shutdown()
 
     scheduler = AsyncIOScheduler()
