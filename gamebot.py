@@ -83,7 +83,8 @@ with sq.connect('DataBase.db') as con:
         slot_chest INT DEFAULT 0,
         slot_accessory INT DEFAULT 0,
         "activity"  TEXT DEFAULT 0,
-        "figh"  TEXT DEFAULT 0
+        "figh"  TEXT DEFAULT 0,
+        "luck" INT DEFAULT 0
         )""")
     
     cur.execute("""CREATE TABLE IF NOT EXISTS battle (
@@ -148,6 +149,85 @@ async def ml(ctx):
     await neeewlvl(member_id)
 
 @bot.command()
+async def shop(ctx):
+    print(f"{datetime.now()} {ctx.message.author} смотрит магазин") #ПРИНТЫ
+    cur.execute(f"SELECT item_id, item_name, item_type, item_price, item_attack, item_deffens from item WHERE item_in_mag = 1")
+    record = cur.fetchall()
+    if len(record) == 0:
+        await ctx.send(f"Магазин пуст")
+        return
+    embed = discord.Embed(title = f"Магазин", colour=discord.Colour(0x417505))
+    for i in record: #Если записи есть - сохраняем
+        item_id = i[0]
+        item_name = i[1]
+        item_type = i[2]
+        item_price = i[3]
+        item_attack = i[4]
+        item_deffens = i[5]
+        embed.add_field(name=f"ID: {item_id} | {item_name}", value=f"🗡️ Атака: {item_attack} | 🛡️ Защита: {item_deffens} | 💰 Цена: {item_price}", inline=False)
+
+    embed.set_footer(text=f"для покупки: {str(settings['prefix'])}buy ID")
+    await ctx.channel.send(embed=embed)
+
+async def givetitem(user_id, item_id):
+    print(f"Выдается предмет ID: {item_id} для {user_id}") #ПРИНТЫ
+    opponent = user_id
+    cur.execute(f"SELECT item_name, item_type, item_price, item_attack, item_deffens, item_luck, item_hp, item_lvl FROM item WHERE item_id = '{item_id}'") #получаем инфу о предмете
+    record = cur.fetchall()
+    cur.execute(f"SELECT * FROM users WHERE discord_id = {opponent}") #пробиваем оппенента 
+    record2 = cur.fetchall()
+    if len(record) == 0 or len(record2) == 0:    #проверяем наши запросы и выдаем ошибку
+        print(f"{'Участник' if len(record2) == 0 else 'Item'} не найден")
+        return
+    cur.execute(f"INSERT INTO inv (inv_owner_id, inv_name, inv_type, inv_price, inv_attack, inv_deffens, inv_luck, inv_hp, inv_lvl) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",[record2[0][0], *record[0][0:]]) #записываем в базу всю инфу
+    con.commit()
+    print("Предмет выдан")
+
+@bot.command()
+@has_permissions(administrator = True)
+async def giveitem(ctx, opponent:discord.Member, item_id: str):
+    print(f"{datetime.now()} {ctx.message.author} выдает предмет {item_id} {opponent}") #ПРИНТЫ
+    await givetitem(ctx.message.author.id, item_id)
+
+
+@bot.command()
+# @has_permissions(administrator = True)
+async def buy(ctx, item_id):
+    print(f"{datetime.now()} {ctx.message.author} хочет купить {item_id}") #ПРИНТЫ
+    cur.execute(f"SELECT item_id, item_name, item_type, item_price, item_attack, item_deffens from item WHERE item_in_mag = 1 AND item_id = '{item_id}'")
+    record = cur.fetchall()
+    if len(record) == 0:
+        await ctx.message.author.send(f"Предмет недоступен к покупке")
+        return
+    embed = discord.Embed(title = f"Вы хотите купить предмет:", colour=discord.Colour(0x417505))
+    for i in record: #Если записи есть - сохраняем
+        item_id = i[0]
+        item_name = i[1]
+        item_type = i[2]
+        item_price = i[3]
+        item_attack = i[4]
+        item_deffens = i[5]
+        embed.add_field(name=f"ID: {item_id} | {item_name}", value=f"🗡️ Атака: {item_attack} | 🛡️ Защита: {item_deffens} | 💰 Цена: {item_price}", inline=False)
+    await ctx.message.author.send(
+        embed=embed,    
+        components = [Button(label = 'Купить', style = 3, custom_id = f"{ctx.message.author}{item_id}")]
+        )
+
+    interaction = await bot.wait_for("button_click", check = lambda i: i.custom_id == f"{ctx.message.author}{item_id}")
+    cur.execute(f"SELECT user_id, coins FROM char WHERE coins >= {item_price} AND user_id = (SELECT id FROM users WHERE discord_id = {ctx.message.author.id})")
+    record2 = cur.fetchall()
+    if len(record2) == 0:
+        await ctx.message.author.send(f"У вас недостаточно денег")
+        return
+    user_id = record2[0][0]
+    coins = record2[0][1]
+    cur.execute(f"UPDATE char SET coins = coins - {item_price} WHERE user_id = {user_id}")
+    con.commit()
+    await givetitem(ctx.message.author.id, item_id)
+    await ctx.message.author.send(f"Вы купили {item_name} за {item_price} 💰\nПроверьте свой инвентарь!")
+    print(f"{ctx.message.author} купил {item_name} за {item_price} coins")
+
+@bot.command()
 #@has_permissions(administrator = True)
 async def equip(ctx, check_item_id: str):
     print(f"{datetime.now()} {ctx.message.author} пытается одеть item_id: {check_item_id}") #ПРИНТЫ
@@ -190,9 +270,19 @@ async def equip(ctx, check_item_id: str):
     if flag:
         await ctx.channel.send("Ваш item был поврежден. Обратитесь к администрации")
         return
+    cur.execute(f"SELECT {slot_list[select_slot-1]} FROM char WHERE {slot_list[select_slot-1]} != 0 AND user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
+    itemrecord = cur.fetchall()
+    if len(itemrecord) != 0:
+        cur.execute(f"SELECT inv_attack, inv_deffens, inv_luck, inv_hp FROM inv WHERE inv_id = {itemrecord[0][0]}")
+        print(f"{datetime.now()} с игрока {ctx.message.author} была снята шмотка {itemrecord[0][0]}") #ПРИНТЫ
+        itemrecord = cur.fetchall()
+        cur.execute(f"UPDATE char SET attack = attack - {itemrecord[0][0]}, deffens = deffens - {itemrecord[0][1]}, luck = luck - {itemrecord[0][2]}, hp = hp -{itemrecord[0][3]} WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
+        con.commit()
     cur.execute(f"UPDATE char SET {slot_list[select_slot-1]} = {item_id} WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
+    cur.execute(f"UPDATE char SET attack = attack + {item_attack}, deffens = deffens + {item_deffens}, luck = luck + {item_luck}, hp = hp + {item_hp} WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
     con.commit()
     print(f"{datetime.now()} {ctx.message.author} смог одеть {item_name}") #ПРИНТЫ
+    await ctx.channel.send(f"Вы надели: {item_name}")
 
 
 @bot.command()
@@ -433,7 +523,7 @@ async def joborwalk(member, status, message):
         else:
             cur.execute(f"UPDATE char SET exp = exp + {x}, coins = coins + {z}, activity = 0 WHERE user_id = {record[0][0]}")
             con.commit() 
-            await member.send(f"За прогулку, вам начисленно {z} опыта и {x} монет !",
+            await member.send(f"За прогулку, вам начисленно {x} опыта и {z} монет !",
             components = [
                 Button(label = 'Гулять еще!', emoji = '🚶‍♂️')
                 ]
@@ -481,24 +571,6 @@ async def walk(ctx):
 
     message = random.choice(walk_list)
     await joborwalk(ctx.message.author, status, message)
-
-@bot.command()
-@has_permissions(administrator = True)
-async def giveitem(ctx, opponent:discord.Member, item_id: str):
-    print(f"{datetime.now()} {ctx.message.author} выдает предмет {item_id} {opponent}") #ПРИНТЫ
-    opponent = opponent.id
-    cur.execute(f"SELECT item_name, item_type, item_price, item_attack, item_deffens, item_luck, item_hp, item_lvl FROM item WHERE item_id = '{item_id}'") #получаем инфу о предмете
-    record = cur.fetchall()
-    cur.execute(f"SELECT * FROM users WHERE discord_id = {opponent}") #пробиваем оппенента 
-    record2 = cur.fetchall()
-    if len(record) == 0 or len(record2) == 0:    #проверяем наши запросы и выдаем ошибку
-        await ctx.send(f"{'Участник' if len(record2) == 0 else 'Item'} не найден")
-        return
-    print(record[0][1:])
-    cur.execute(f"INSERT INTO inv (inv_owner_id, inv_name, inv_type, inv_price, inv_attack, inv_deffens, inv_luck, inv_hp, inv_lvl) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",[record2[0][0], *record[0][0:]]) #записываем в базу всю инфу
-    con.commit()
-    await ctx.send(f"Предмет выдан")
-    print("Предмет выдан")
 
 @bot.command()
 async def inventory(ctx):
@@ -832,14 +904,14 @@ async def mibattle(select_race, member): #просчет кнопки, кото�
         member.send("Вы не можете сражаться с нулевым здоровьем")
         return
     if select_race == record[0][1]: #если защита расы, то записываем
-        power = (attack*deffens/2)/2/max_hp*hp
+        power = (attack+deffens/2)/2/max_hp*hp
         cur.execute(f"UPDATE battle SET deffens = deffens + {power} WHERE race = '{record[0][1]}'")
         cur.execute(f"UPDATE char SET figh = '{racestatus[4]}' WHERE user_id = {record[0][0]}")
         con.commit()
         print(f"{datetime.now()} {member} {racestatus[4]} {record[0][1]}") #ПРИНТЫ
         await member.send(f"Вы встали на защиту вашей расы")
         return
-    power = (deffens*attack/2)/2/max_hp*hp #если человек идет против другой расы - считаем это ниже
+    power = (deffens+attack/2)/2/max_hp*hp #если человек идет против другой расы - считаем это ниже
     member_race_number = race.index(member_race)
     status_attack = race.index(select_race)
     cur.execute(f"UPDATE battle SET {raceattak[member_race_number]} = {raceattak[member_race_number]} + {power} WHERE race = '{select_race}'")
@@ -879,6 +951,9 @@ async def on_ready():
             await interaction.edit_origin()
         elif interaction.component.label == 'Гулять еще!':
             await joborwalk(interaction.author, "гуляет", "Хорошо, давай еще немного погуляем")
+            await interaction.edit_origin()
+        elif interaction.component.label == 'Купить':
+            print(f"{interaction.author} нажал на кнопку Купить")
             await interaction.edit_origin()
         else:
             await interaction.respond(content="Произошла ошибка, обратитесь к администрации!")
