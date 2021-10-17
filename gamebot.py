@@ -50,7 +50,8 @@ with sq.connect('DataBase.db') as con:
         "item_deffens"   INT DEFAULT 0,
         "item_luck" INT DEFAULT 0,
         "item_hp"   INT DEFAULT 0,
-        "item_lvl"  INT DEFAULT 0
+        "item_lvl"  INT DEFAULT 0,
+        "item_in_mag"  INT DEFAULT 0
         )""")
 
     cur.execute("""CREATE TABLE IF NOT EXISTS inv (
@@ -119,6 +120,8 @@ async def help(ctx):
     embed.add_field(name="inventory", value="Посмотреть Ваш инвентарь")
     embed.add_field(name="gb", value="Вызвает кнопки, для выбора направления боя")
     embed.add_field(name="pingb (раса)", value="Призывает на бой против написанной расы")
+    embed.add_field(name="shop", value="Показывает магазин и все товары в нем")
+    embed.add_field(name="buy (id предмета)", value="Вызывает меню покупки предмета")
     embed.add_field(name="equip (id предмета)", value="Позволяет надеть предмет/одежду")
     embed.add_field(name="job", value="Вы оправитесь на прогулку и получите опыт и немного денег")
     embed.add_field(name="walk", value="Вы оправитесь на поиски подработки и получите денеги и немного опыта")
@@ -577,7 +580,8 @@ async def inventory(ctx):
     print(f"{datetime.now()} {ctx.message.author} смотрит свой инвентарь") #ПРИНТЫ
     opponent = ctx.message.author.id
     member = ctx.message.author
-    cur.execute(f"SELECT * from inv WHERE inv_owner_id = (SELECT user_id FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = '{opponent}'))")
+
+    cur.execute(f"SELECT inv_id, inv_sharp, inv_name, inv_type, inv_price, inv_attack, inv_deffens, inv_luck, inv_hp, inv_lvl from inv WHERE inv_owner_id = (SELECT user_id FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = '{opponent}'))")
     record = cur.fetchall()
     if len(record) == 0:
         await ctx.send(f"Инвентарь пуст")
@@ -585,13 +589,20 @@ async def inventory(ctx):
 
     embed = discord.Embed(title = f"Инвентарь {member}", colour=discord.Colour(0x417505))
     for i in record: #Если записи есть - сохраняем
-        inv_id = i[0]
-        inv_name = i[3]
-        inv_type = i[4]
-        embed.add_field(name=f"{inv_name} ", value=f"ID: {inv_id} | Тип: {inv_type}", inline=False)
-
-    embed.set_footer(text="👁️ - адмниские или закрытые команды")
+        item_id = i[0]
+        item_sharp = i[1]
+        item_name = i[2]
+        item_type = i[3]
+        item_price = i[4]
+        item_attack = i[5]
+        item_deffens = i[6]
+        item_luck = i[7]
+        item_hp = i[8]
+        item_lvl = i[9]
+        embed.add_field(name=f"ID: {item_id} | {item_name} + {item_sharp}", value=f"Атака: {item_attack} 🗡️  Защита: {item_deffens} 🛡️ ХП: {item_hp} 💖 \nЦена: {item_price} 💰 Удача: {item_luck} 🍀 Мин. LVL: {item_lvl}✨ ", inline=False)
+    embed.set_footer(text=f"Надеть предмет: {str(settings['prefix'])}equip")
     await ctx.channel.send(embed=embed)
+
 
 @bot.command()
 @has_permissions(administrator = True)
