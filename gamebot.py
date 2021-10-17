@@ -139,7 +139,7 @@ def neeewlvl(member_id):
     cur.execute(f"SELECT MAX(exp_lvl), exp_exp FROM exp WHERE exp_exp <= {record[0][2]}") #Просчет опыта и лвл
     record2 = cur.fetchall()
     if record[0][1] != record2[0][0]: #Если максимальный лвл уже равен просчету, то пропускаем
-        cur.execute(f"UPDATE char SET level = {record2[0][0]} WHERE user_id = {record[0][0]}") #выдаем новый лвл
+        cur.execute(f"UPDATE char SET attack = attack + 1, deffens = deffens + 1, level = {record2[0][0]} WHERE user_id = {record[0][0]}") #выдаем новый лвл
         con.commit()
 
 @bot.command() #Тестовая команда
@@ -434,7 +434,7 @@ async def joborwalk(member, status, message):
         if status == "работает":
             cur.execute(f"UPDATE char SET exp = exp + {z}, coins = coins + {x}, activity = 0 WHERE user_id = {record[0][0]}")
             con.commit() 
-            await member.send(f"За работу, Вам начисленно {z} опыта и {x} монет !",
+            await member.send(f"За рфаботу, Вам начисленно {z} опыта и {x} монет !",
             components = [
                 Button(label = 'Работать еще!', emoji = '⚒️')
                 ]
@@ -460,7 +460,6 @@ async def joborwalk(member, status, message):
 @bot.command()
 async def job(ctx):
     status = "работает"
-    member = ctx.message.author
     job_list = [
         "Надо немного поработать",
         "Я каменщик, работаю три дня и еще ХОЧУ!",
@@ -476,13 +475,12 @@ async def job(ctx):
         "Опять работа?",
     ]
     message = random.choice(job_list)
-    await joborwalk(member, status, message)
+    await joborwalk(ctx.message.author, status, message)
 
 @bot.command()
 # @has_permissions(administrator = True)
 async def walk(ctx):
     status = "гуляет"
-    member = ctx.message.author
     walk_list = [
         "Вы решили немного прогуляться",
         "Вы устали работать и решили немного погулять",
@@ -491,7 +489,7 @@ async def walk(ctx):
     ]
 
     message = random.choice(walk_list)
-    await joborwalk(member, status, message)
+    await joborwalk(ctx.message.author, status, message)
 
 @bot.command()
 @has_permissions(administrator = True)
@@ -629,6 +627,7 @@ async def inviteguild(ctx, opponent: discord.Member):
 @bot.command()
 @has_permissions(administrator = True)
 async def say(ctx, *, text):
+    print(ctx)
     message = ctx.message
     await message.delete()
     await ctx.send(text)
