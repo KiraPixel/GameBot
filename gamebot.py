@@ -279,6 +279,8 @@ async def battle():
         cur = con.cursor()
         bebra = cur.execute(f"SELECT * FROM battle")
         Direction = {"Дриады": [0, 0, "", 0, " "], "Драконы": [0, 0, "", 0, " "], "Зверолюди": [0, 0, "", 0, ""], "Люди": [0, 0, "", 0, ""]} #Задаю словарь, для облегчения вывода репорта.
+        spisok = ["🍀Дриады", "🐉Драконы", "🐱Зверолюди", "🧙Люди"]
+        spisok2 = ["Дриады", "Драконы", "Зверолюди", "Люди"]
         for hl in bebra: #Обсчет результатов битвы за направление
             high = max(hl[1], hl[2], hl[3], hl[4])
             win = hl.index(high)
@@ -288,24 +290,12 @@ async def battle():
                 Direction[str(hl[0])][2] = "🛡️Деф"
                 Direction[str(hl[0])][3] = high*2
             else: #Если победила атака
-                if win == 2: #Проверка кому отдать раунд
-                    Direction["Дриады"][0] += 1
-                    Direction[str(hl[0])][2] = "🍀Дриады"
-                elif win == 3:
-                    Direction["Драконы"][0] += 1
-                    Direction[str(hl[0])][2] = "🐉Драконы"
-                elif win == 4:
-                    Direction["Зверолюди"][0] += 1
-                    Direction[str(hl[0])][2] = "🐱Зверолюди"
-                elif win == 5:
-                    Direction["Люди"][0] += 1
-                    Direction[str(hl[0])][2] = "🧙Люди"
-                else: 
-                    print(f"NaN\n -----------------------------------------------------------")
                 Direction[str(hl[0])][3] = high*2
                 n = 2
+                Direction[str(spisok2[win-2])][0] += 1
                 for i in Direction: #Просчет предвадительных (чистых) очков, без бонуса.
                     Direction[i][1] += hl[n]*2
+                    Direction[str(hl[0])][2] = spisok[win-2]
                     n += 1
         b = 0
         smile = ["🍀", "🐉", "🐱", "🧙"] #Доп список, для вывода смайлов в репорте
@@ -335,7 +325,7 @@ async def battle():
         sorted_battle_top = sorted(battle_top.items(), key=operator.itemgetter(1)) #Сортировка списка(определение топа)
         top_fraction = f"1. {sorted_battle_top[3][0]} - {sorted_battle_top[3][1][0]}🏆{sorted_battle_top[3][1][1]}\n2. {sorted_battle_top[2][0]} - {sorted_battle_top[2][1][0]}🏆{sorted_battle_top[2][1][1]}\n3. {sorted_battle_top[1][0]} - {sorted_battle_top[1][1][0]}🏆{sorted_battle_top[1][1][1]}\n4. {sorted_battle_top[0][0]} - {sorted_battle_top[0][1][0]}🏆{sorted_battle_top[0][1][1]}"             
         record = cur.fetchall() #Эмбед-репорт о битве
-        reports = bot.get_channel(890294191027011625) #канал отправки эмбеда
+        reports = bot.get_channel(890280293620150312) #канал отправки эмбеда
         embed = discord.Embed(
             title = f'БИТВА на {datetime.now().hour} часов\n\n',
             description = f'{Direction["Дриады"][4]}\nРаунд за: {Direction["Дриады"][2]}\nПобедители набрали: {Direction["Дриады"][3]}🏆\n\n{Direction["Драконы"][4]}\nРаунд за: {Direction["Драконы"][2]}\nПобедители набрали: {Direction["Драконы"][3]}🏆\n\n{Direction["Зверолюди"][4]}\nРаунд за: {Direction["Зверолюди"][2]}\nПобедители набрали: {Direction["Зверолюди"][3]}🏆\n\n{Direction["Люди"][4]}\nРаунд за: {Direction["Люди"][2]}\nПобедители набрали: {Direction["Люди"][3]}🏆\n\nТОП ФРАКЦИЙ:\n{top_fraction}\n',
@@ -345,6 +335,7 @@ async def battle():
         cur.execute(f"UPDATE battle SET deffens = 0,driadas_atack = 0, neko_atack = 0, people_atack = 0, dragons_atack = 0") 
         cur.execute(f"UPDATE char SET figh = '0'") #обнуляем у всех статусы битв
         con.commit() #Окончание работы с бд
+
 
 @bot.command()
 # @has_permissions(administrator = True)
