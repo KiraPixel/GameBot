@@ -152,6 +152,28 @@ async def ml(ctx):
     await neeewlvl(member_id)
 
 @bot.command()
+@has_permissions(administrator = True)
+async def pvp(ctx, opponent:discord.Member):
+    member_id = ctx.message.author.id
+    guild = bot.get_guild(890003889858957382)
+    member = guild.get_member(member_id)
+    cur.execute(f"SELECT level, hp, max_hp FROM char WHERE user_id = (SELECT id FROM users WHERE discord_id = {member_id})")
+    record = cur.fetchall()
+    for i in record: #получаем данные из рекорда
+        level = i[0]
+        hp = i[1]
+        max_hp = i[2]
+    embed = discord.Embed(title = f"Вас вызвали на битву", colour=discord.Colour(0x417505))
+    embed.add_field(name=f"{member.nick}", value=f"✨ LVL:{level}\n❤️ HP:{hp}/{max_hp}", inline=False)
+    await opponent.send(
+        embed=embed,    
+        components = [Button(label = 'Согласиться на битву', style = 3, custom_id = f"{member_id}{opponent.id}pvp")]
+        )
+    interaction = await bot.wait_for("button_click", check = lambda i: i.custom_id == f"{member_id}{opponent.id}pvp")
+    await ctx.message.author.send("Противник принял соглашение")
+    await opponent.send("Вы приняли соглашение")
+
+@bot.command()
 async def shop(ctx):
     print(f"{datetime.now()} {ctx.message.author} смотрит магазин") #ПРИНТЫ
     cur.execute(f"SELECT item_id, item_name, item_type, item_price, item_attack, item_deffens from item WHERE item_in_mag = 1")
@@ -190,7 +212,7 @@ async def givetitem(user_id, item_id):
 @has_permissions(administrator = True)
 async def giveitem(ctx, opponent:discord.Member, item_id: str):
     print(f"{datetime.now()} {ctx.message.author} выдает предмет {item_id} {opponent}") #ПРИНТЫ
-    await givetitem(ctx.message.author.id, item_id)
+    await givetitem(opponent, item_id)
 
 
 @bot.command()
@@ -279,10 +301,10 @@ async def equip(ctx, check_item_id: str):
         cur.execute(f"SELECT inv_attack, inv_deffens, inv_luck, inv_hp FROM inv WHERE inv_id = {itemrecord[0][0]}")
         print(f"{datetime.now()} с игрока {ctx.message.author} была снята шмотка {itemrecord[0][0]}") #ПРИНТЫ
         itemrecord = cur.fetchall()
-        cur.execute(f"UPDATE char SET attack = attack - {itemrecord[0][0]}, deffens = deffens - {itemrecord[0][1]}, luck = luck - {itemrecord[0][2]}, hp = hp -{itemrecord[0][3]} WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
+        cur.execute(f"UPDATE char SET attack = attack - {itemrecord[0][0]}, deffens = deffens - {itemrecord[0][1]}, luck = luck - {itemrecord[0][2]}, max_hp = max_hp -{itemrecord[0][3]} WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
         con.commit()
     cur.execute(f"UPDATE char SET {slot_list[select_slot-1]} = {item_id} WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
-    cur.execute(f"UPDATE char SET attack = attack + {item_attack}, deffens = deffens + {item_deffens}, luck = luck + {item_luck}, hp = hp + {item_hp} WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
+    cur.execute(f"UPDATE char SET attack = attack + {item_attack}, deffens = deffens + {item_deffens}, luck = luck + {item_luck}, max_hp = max_hp + {item_hp} WHERE user_id = (SELECT id FROM users WHERE discord_id = '{member_id}')")
     con.commit()
     print(f"{datetime.now()} {ctx.message.author} смог одеть {item_name}") #ПРИНТЫ
     await ctx.channel.send(f"Вы надели: {item_name}")
@@ -937,8 +959,8 @@ async def on_ready():
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(battle, trigger='cron', hour='12', minute='00')
-    scheduler.add_job(battle, trigger='cron', hour='16', minute='00')
-    scheduler.add_job(battle, trigger='cron', hour='20', minute='00')
+    scheduler.add_job(battle, trigger='cron', hour='18', minute='00')
+    scheduler.add_job(battle, trigger='cron', hour='00', minute='00')
     scheduler.start()
 
     DiscordComponents(bot)
@@ -965,6 +987,9 @@ async def on_ready():
             await interaction.edit_origin()
         elif interaction.component.label == 'Купить':
             print(f"{interaction.author} нажал на кнопку Купить")
+            await interaction.edit_origin()
+        elif interaction.component.label == 'Согласиться на битву':
+            print(f"{interaction.author} нажал на кнопку Согласиться на битву")
             await interaction.edit_origin()
         else:
             await interaction.respond(content="Произошла ошибка, обратитесь к администрации!")
