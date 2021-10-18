@@ -953,11 +953,30 @@ async def mibattle(select_race, member): #просчет кнопки, кото�
     print(f"{datetime.now()} {member} {racestatus[status_attack]}") #принты
     await member.send(f"Вы записались на битву. Статус: {racestatus[status_attack]}")
 
+async def healtime():
+    print("Запуск healtime")
+    cur.execute("SELECT user_id, hp, max_hp, discord_id FROM char, users WHERE hp != max_hp AND id = user_id") #Получаем user_id, level, exp
+    record = cur.fetchall()
+    for i in record:
+        if i[2] > i[1]: #если хп меньше max_hp то даем +1 к хп
+            cur.execute(f"UPDATE char SET hp = hp +1 WHERE user_id = {i[0]}")
+            guild = bot.get_guild(890003889858957382)
+            member = guild.get_member(i[3])
+            await member.send(f"Вам было выданно +1 ❤️\nВаше текующее здоровье {i[1]+1}/{i[2]}")
+            print(f"Выданно 1 ХП для {member}")
+
+
+        elif i[1] > i[2]:
+            cur.execute(f"UPDATE char SET hp = max_hp WHERE user_id = {i[0]}")
+            print(f"У player_id: {i[0]} ХП было больше максимального.")
+        con.commit()
+
 @bot.event
 async def on_ready():
     print(f"{datetime.now()} Bot сonnected to Discord")
 
     scheduler = AsyncIOScheduler()
+    scheduler.add_job(healtime, trigger='cron', minute='00')
     scheduler.add_job(battle, trigger='cron', hour='12', minute='00')
     scheduler.add_job(battle, trigger='cron', hour='18', minute='00')
     scheduler.add_job(battle, trigger='cron', hour='00', minute='00')
